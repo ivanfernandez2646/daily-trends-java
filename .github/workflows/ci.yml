@@ -30,3 +30,6 @@ jobs:
 
       - name: Quality gate
         run: ./mvnw --batch-mode verify
+
+      - name: Docker image
+        run: docker build .

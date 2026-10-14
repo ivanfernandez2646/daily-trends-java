@@ -7,7 +7,7 @@ created_at: '2026-10-14T12:29:53Z'
 created_by:
   tool: 'Claude Code'
   model: 'claude-opus-5-5'
-updated_at: '2026-10-14T15:33:40Z'
+updated_at: '2026-10-14T15:55:48Z'
 implemented_phases:
   - phase: 1
     implemented_at: '2026-10-14T14:10:00Z'
@@ -27,6 +27,10 @@ implemented_phases:
     model: 'claude-opus-5-5'
   - phase: 5
     implemented_at: '2026-10-14T15:33:40Z'
+    tool: 'Claude Code'
+    model: 'claude-opus-5-5'
+  - phase: 6
+    implemented_at: '2026-10-14T15:55:48Z'
     tool: 'Claude Code'
     model: 'claude-opus-5-5'
 ---
@@ -635,20 +639,20 @@ Compose, the image build in CI, and updated docs.
 - `.dockerignore` (`target/`, `config/`, `reference/`, `.git/`).
 - `docker-compose.yml`: service `api`, built from the `Dockerfile`, `depends_on: mongo` with
   `condition: service_healthy`, `SPRING_MONGODB_URI=mongodb://mongo:27017/daily-trends-dev`,
-  `SPRING_PROFILES_ACTIVE=production`, port `5000:5000`.
+  `SPRING_PROFILES_ACTIVE=production`, port `${SERVER_PORT:-5000}:5000`.
 - CI: add a `docker build .` step after `./mvnw verify`.
 
 ### Tests first
 
-- [ ] `OpenApiDocumentTest` (`@IntegrationTest`, `MockMvcTester`):
+- [x] `OpenApiDocumentIT` (`@IntegrationTest`, `MockMvcTester`):
   - `GET /v3/api-docs` returns 200 JSON with `openapi` starting with `3.1` and `info.title`
     `daily-trends API`;
   - `paths./status.get.responses` has `200` and `500`, and the `500` refers to
     `#/components/schemas/ErrorResponse`, which has a required string property `error`;
   - `/v3/api-docs` and the Swagger UI paths are not in `paths`.
-- [ ] `SwaggerUiTest`: `GET /swagger-ui/index.html` returns 200 (it must keep working with
+- [x] `SwaggerUiIT`: `GET /swagger-ui/index.html` returns 200 (it must keep working with
   `spring.web.resources.add-mappings=false`).
-- [ ] Manual check, recorded in the phase summary:
+- [x] Manual check, recorded in the phase summary:
   - `docker compose up -d --wait --build`, then `curl -i localhost:5000/status` returns 200 and
     `curl -s localhost:5000/v3/api-docs` returns the document;
   - `docker run --rm <image>` (profile `production`) without `SPRING_MONGODB_URI` exits with code 1,
@@ -656,24 +660,59 @@ Compose, the image build in CI, and updated docs.
 
 ### Implementation
 
-- [ ] Dependency `springdoc-openapi-starter-webmvc-ui` 3.1.1. Resource filtering for the project
+- [x] Dependency `springdoc-openapi-starter-webmvc-ui` 3.1.1. Resource filtering for the project
   version in `application.properties`, or `BuildProperties` from `spring-boot-maven-plugin`'s
   `build-info` goal.
-- [ ] `OpenApiConfiguration`, annotations on `StatusGetController` and `ErrorResponse`.
+- [x] `OpenApiConfiguration`, annotations on `StatusGetController` and `ErrorResponse`.
   `springdoc.paths-to-match=/status,/feed/**`.
-- [ ] `Dockerfile`, `.dockerignore`.
-- [ ] `api` service in `docker-compose.yml`, and its header comment updated.
-- [ ] CI `docker build` step.
-- [ ] `README.md`:
+- [x] `Dockerfile`, `.dockerignore`.
+- [x] `api` service in `docker-compose.yml`, and its header comment updated.
+- [x] CI `docker build` step.
+- [x] `README.md`:
   - status line and getting started now that `./mvnw verify` exists (the configuration table and
     the API docs routes are already there);
   - Docker usage;
   - `GET /status` marked as implemented.
-- [ ] Refactor without changing behavior.
-- [ ] Run `./mvnw verify` and the manual Docker checks, and fix failures.
-- [ ] STOP for user review. Suggest three Conventional Commit messages.
+- [x] Refactor without changing behavior.
+- [x] Run `./mvnw verify` and the manual Docker checks, and fix failures.
+- [x] STOP for user review. Suggest three Conventional Commit messages.
+
+### Implementation notes
+
+- **Version source:** the `build-info` goal of `spring-boot-maven-plugin` gives `BuildProperties`.
+  `OpenApiConfiguration` falls back to `unknown` when an IDE run has no build info.
+- **springdoc settings:**
+  - `springdoc.api-docs.version=openapi_3_1`;
+  - `springdoc.paths-to-match=/status,/feed/**`, so the test-only probe routes and the framework
+    routes stay out;
+  - `springdoc.override-with-generic-response=false`, so the `@RestControllerAdvice` handlers do not
+    add their responses to every route. Only the customizer's `500` is added.
+- **`ErrorResponse.error`** is `@Schema(requiredMode = REQUIRED)`, which puts it in the schema's
+  `required` list.
+- **Swagger UI** works with `spring.web.resources.add-mappings=false`, because springdoc registers
+  its own resource handler (`SwaggerUiIT`).
+- **Dockerfile:**
+  - `dependency:go-offline` runs before copying `src` to cache dependencies;
+  - packaging skips tests, Spotless and JaCoCo, because CI and the pre-push hook run the gate;
+  - `java -Djarmode=tools … extract --layers --launcher` splits the jar, and the image runs
+    `JarLauncher` as user `app` (uid 999). The image is about 570 MB.
+- **Compose ports:**
+  - the API's host port is configurable with `${SERVER_PORT:-5000}`, because AirPlay holds 5000 on
+    macOS;
+  - MongoDB keeps the fixed host port 27017, as the user decided;
+  - stop other projects' MongoDB (for example the Python port's) before `docker compose up`.
+- **Manual checks**, with `SERVER_PORT=5123 docker compose up -d --wait --build`:
+  - `/status` returns 200;
+  - `/v3/api-docs` returns OpenAPI `3.1.0`, version `0.1.0-SNAPSHOT`, and `/status` with `200` and
+    `500`;
+  - `/swagger-ui/index.html` returns 200;
+  - `docker run --rm daily-trends-java-api` without `SPRING_MONGODB_URI` exits with code 1, and its
+    failure analysis names `spring.mongodb.uri`.
 
 ## Next step
 
-Run `/ai-project-implement-phase .agents/plans/2026_10_14-s01-foundation/2026_10_14-s01-foundation-plan.md`
-to implement Phase 6 (OpenAPI and delivery). Phase 5 is done and awaits review.
+All S01 phases are implemented. After review and commit:
+
+1. Push `feat/s01-foundation`; the pre-push hook and CI run the quality gate. Open a pull request
+   to `main`.
+2. Plan S02 with `/ai-project-create-plan specs/feeds/S02-scrape-external-sources.md`.
