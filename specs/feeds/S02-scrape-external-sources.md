@@ -47,8 +47,8 @@ Same walk as Node's `FeedScraperBase`:
 ## HTTP requests
 Each page is downloaded with `Jsoup.connect(url)`:
 
-- Timeout `SCRAP_TIMEOUT_SECONDS` (default 10 s) for the whole request. A timeout fails that scraper
-  only.
+- Timeout `daily-trends.scraping.timeout` (default `10s`, S01) for the whole request. A timeout
+  fails that scraper only.
 - `User-Agent: daily-trends-java`. A GET sends no `Content-Type` header.
 - Redirects are followed (`https://elmundo.es/` answers 301 to `https://www.elmundo.es/`).
 - `ignoreHttpErrors(true)`: a non-2xx response is not an error; its body is parsed like any other page,
@@ -109,5 +109,7 @@ Each page is downloaded with `Jsoup.connect(url)`:
   - a second `GET /feed/scrap` → 200 `[]`, still 12 stored.
   The `/feed/home` and `/feed/list` steps of the Node scenario are covered by S03, or by reading the
   repository while `/feed/list` is out of scope.
+- OpenAPI test: `GET /feed/scrap` appears in `/v3/api-docs` with a `200` array of the feed schema
+  (S01 feed JSON, `description` and `updated_at` nullable).
 - One live smoke test per scraper against the real front page, tagged `network` and run only with
   `./mvnw verify -Pnetwork`: 5 feeds with the scraper's source and non-blank author and title.

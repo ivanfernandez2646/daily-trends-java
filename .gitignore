@@ -5,10 +5,8 @@ target/
 # Read-only reference copy of the Node project
 reference/
 
-# Environment and secrets
-.env
-.env.*
-!.env.example
+# Local configuration overrides and secrets (Spring Boot loads ./config/ by itself)
+/config/
 
 # Personal Claude Code config, IDE and OS files
 .claude/settings.local.json

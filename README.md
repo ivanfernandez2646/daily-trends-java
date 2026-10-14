@@ -14,6 +14,7 @@ made in the Python port (`daily-trends-py`).
 - Java 25, Spring Boot 4.1 (Web MVC, virtual threads), Maven wrapper
 - MongoDB with Spring Data MongoDB (`MongoTemplate`)
 - Jsoup (`Jsoup.connect`) for scraping
+- springdoc-openapi (OpenAPI document and Swagger UI)
 - JUnit Jupiter, AssertJ, Testcontainers 2, ArchUnit, Spotless
 - Virtual threads with an explicit executor and `CompletableFuture`
 - Hexagonal architecture with a single bounded context (`cms`, subdomain `feeds`)
@@ -27,6 +28,7 @@ June 2026, so a migration starting now targets the 4.x line.
 | Method and path | Description | Spec |
 |---|---|---|
 | `GET /status` | Health check | S01 |
+| `GET /v3/api-docs`, `GET /swagger-ui.html` | OpenAPI document and Swagger UI, generated from the code | S01 |
 | `GET /feed/scrap` | Scrape El Mundo and El Español, store new headlines, return the ones saved | S02 |
 | `GET /feed/home` | 10 newest scraped feeds; a stale page triggers a background refresh | S03 |
 
@@ -40,8 +42,27 @@ docker compose up -d --wait   # MongoDB on localhost:27017
 ./mvnw spring-boot:run        # API on http://localhost:5000
 ```
 
-On macOS, port 5000 is used by AirPlay Receiver: put `PORT=5123` in a local `.env` (see
-`.env.example`).
+### Configuration
+
+Standard Spring Boot profiles and properties. The active profile is `dev` unless
+`SPRING_PROFILES_ACTIVE` says `test` or `production`.
+
+| Property | Environment variable | Default |
+|---|---|---|
+| `spring.mongodb.uri` | `SPRING_MONGODB_URI` | `dev`: `mongodb://localhost:27017/daily-trends-dev`; `test`: `mongodb://localhost:27017/daily-trends-test`; `production`: required |
+| `server.port` | `SERVER_PORT` | `5000` |
+| `daily-trends.timezone` | `DAILY_TRENDS_TIMEZONE` | `Europe/Madrid` (business day) |
+| `daily-trends.scraping.timeout` | `DAILY_TRENDS_SCRAPING_TIMEOUT` | `10s` (each scraping request) |
+| `daily-trends.scraping.cooldown` | `DAILY_TRENDS_SCRAPING_COOLDOWN` | `300s` (between background refreshes; `0s` disables it) |
+
+Local overrides go in `config/application.properties` (git-ignored, loaded by Spring Boot from the
+working directory; tests never read it). For example, on macOS port 5000 is used by AirPlay
+Receiver:
+
+```properties
+# config/application.properties
+server.port=5123
+```
 
 ## Project layout
 
