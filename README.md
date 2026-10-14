@@ -6,7 +6,8 @@ front pages of El Mundo and El Español and serves the newest headlines. It rehe
 migration with the same hexagonal architecture, and applies from the start the improvements already
 made in the Python port (`daily-trends-py`).
 
-**Status:** specs ready, implementation not started. Work follows the
+**Status:** S01 (foundation) implemented: configuration, MongoDB, error format, `GET /status`,
+OpenAPI, feed domain and repository. S02 and S03 are next. Work follows the
 [spec-driven workflow](#spec-driven-workflow).
 
 ## Stack
@@ -14,6 +15,7 @@ made in the Python port (`daily-trends-py`).
 - Java 25, Spring Boot 4.1 (Web MVC, virtual threads), Maven wrapper
 - MongoDB with Spring Data MongoDB (`MongoTemplate`)
 - Jsoup (`Jsoup.connect`) for scraping
+- springdoc-openapi (OpenAPI document and Swagger UI)
 - JUnit Jupiter, AssertJ, Testcontainers 2, ArchUnit, Spotless
 - Virtual threads with an explicit executor and `CompletableFuture`
 - Hexagonal architecture with a single bounded context (`cms`, subdomain `feeds`)
@@ -22,26 +24,67 @@ Why Java 25 and Spring Boot 4: Java 25 is the current LTS and its virtual thread
 carrier thread inside `synchronized` (JEP 491). Spring Boot 3.5 left open-source support in
 June 2026, so a migration starting now targets the 4.x line.
 
-## API (planned)
+## API
 
-| Method and path | Description | Spec |
-|---|---|---|
-| `GET /status` | Health check | S01 |
-| `GET /feed/scrap` | Scrape El Mundo and El Español, store new headlines, return the ones saved | S02 |
-| `GET /feed/home` | 10 newest scraped feeds; a stale page triggers a background refresh | S03 |
+| Method and path | Description | Spec | Status |
+|---|---|---|---|
+| `GET /status` | Health check | S01 | Implemented |
+| `GET /v3/api-docs`, `GET /swagger-ui.html` | OpenAPI document and Swagger UI, generated from the code | S01 | Implemented |
+| `GET /feed/scrap` | Scrape El Mundo and El Español, store new headlines, return the ones saved | S02 | Planned |
+| `GET /feed/home` | 10 newest scraped feeds; a stale page triggers a background refresh | S03 | Planned |
+
+Every error answers `{"error": "<message>"}`.
 
 ## Getting started
 
 Requirements: JDK 25 (for example `sdk install java 25-tem`), Docker (MongoDB and Testcontainers).
 
 ```bash
-docker compose up -d --wait   # MongoDB on localhost:27017
-./mvnw verify                 # quality gate (available once S01 is implemented)
-./mvnw spring-boot:run        # API on http://localhost:5000
+git config core.hooksPath .githooks   # once per clone: run ./mvnw verify before every push
+docker compose up -d --wait mongo     # MongoDB on localhost:27017
+./mvnw verify                         # quality gate: format, unit, integration, architecture
+./mvnw spring-boot:run                # API on http://localhost:5000 (profile dev)
 ```
 
-On macOS, port 5000 is used by AirPlay Receiver: put `PORT=5123` in a local `.env` (see
-`.env.example`).
+Run everything in Docker instead (the API image uses the `production` profile):
+
+```bash
+docker compose up -d --wait --build   # MongoDB and the API on http://localhost:5000
+docker compose down
+```
+
+`SERVER_PORT` changes the API's host port, for example `SERVER_PORT=5123` on macOS, where AirPlay
+Receiver uses port 5000. MongoDB always uses host port 27017.
+
+Integration tests (`*IT`) start MongoDB with Testcontainers and need Docker. With OrbStack, which
+does not create `/var/run/docker.sock` by default, point Testcontainers at its socket once in
+`~/.testcontainers.properties`:
+
+```properties
+docker.host=unix:///Users/<you>/.orbstack/run/docker.sock
+```
+
+### Configuration
+
+Standard Spring Boot profiles and properties. The active profile is `dev` unless
+`SPRING_PROFILES_ACTIVE` says `test` or `production`.
+
+| Property | Environment variable | Default |
+|---|---|---|
+| `spring.mongodb.uri` | `SPRING_MONGODB_URI` | `dev`: `mongodb://localhost:27017/daily-trends-dev`; `test`: `mongodb://localhost:27017/daily-trends-test`; `production`: required |
+| `server.port` | `SERVER_PORT` | `5000` |
+| `daily-trends.timezone` | `DAILY_TRENDS_TIMEZONE` | `Europe/Madrid` (business day) |
+| `daily-trends.scraping.timeout` | `DAILY_TRENDS_SCRAPING_TIMEOUT` | `10s` (each scraping request) |
+| `daily-trends.scraping.cooldown` | `DAILY_TRENDS_SCRAPING_COOLDOWN` | `300s` (between background refreshes; `0s` disables it) |
+
+Local overrides go in `config/application.properties` (git-ignored, loaded by Spring Boot from the
+working directory; tests never read it). For example, on macOS port 5000 is used by AirPlay
+Receiver:
+
+```properties
+# config/application.properties
+server.port=5123
+```
 
 ## Project layout
 

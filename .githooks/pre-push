@@ -1,0 +1,14 @@
+#!/bin/sh
+# Runs the quality gate before every push. Enable once per clone:
+#   git config core.hooksPath .githooks
+# It checks the working tree, so commit or stash unrelated changes first.
+
+if [ -n "$(git status --porcelain)" ]; then
+    echo "pre-push: warning: uncommitted changes are included in this check." >&2
+fi
+
+echo "pre-push: running ./mvnw verify (format, unit, integration and architecture tests)..."
+if ! ./mvnw --batch-mode --quiet verify; then
+    echo "pre-push: the quality gate failed; push aborted. Fix it or run ./mvnw verify to see why." >&2
+    exit 1
+fi

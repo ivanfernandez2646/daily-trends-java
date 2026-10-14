@@ -42,6 +42,7 @@ Fixed decisions. A change needs a spec or an approved plan that says why.
 | JSON | Jackson 3 as managed by Spring Boot (packages `tools.jackson.*`; annotations stay in `com.fasterxml.jackson.annotation`). `Instant` uses Jackson's default ISO-8601 format |
 | Tests | JUnit Jupiter and AssertJ (from the Spring Boot test starters), Testcontainers 2 (`testcontainers-mongodb`) with `@ServiceConnection` on a container `@Bean` |
 | Architecture tests | ArchUnit 1.5.x (`archunit-junit5` or `archunit-junit6`, matching the JUnit version Spring Boot manages) |
+| API docs | springdoc-openapi (`springdoc-openapi-starter-webmvc-ui`), generated from the code; annotations only in `apps/` |
 | Formatting | Spotless with `palantir-java-format` |
 | Local services | Docker Compose (MongoDB) |
 | Nullness | `Optional` for absent results; JSpecify `@Nullable` on nullable fields and parameters |
@@ -68,7 +69,7 @@ In this project: `apps/cmsbackend` and `contexts/cms/{feeds,shared}`.
 - Application code depends on ports (Java `interface`s in `domain`). Infrastructure adapters contain
   only technology details.
 - `domain` and `application` never import Spring, Spring Data, the MongoDB driver, Jackson, Jsoup or
-  `java.net`. JSpecify annotations and `java.util.concurrent` are allowed. An ArchUnit test enforces it, and it is part of the quality gate.
+  `java.net` (nor springdoc/Swagger). JSpecify annotations and `java.util.concurrent` are allowed. An ArchUnit test enforces it, and it is part of the quality gate.
 - No Spring stereotype annotations (`@Service`, `@Component`, `@Repository`) outside `apps/`. Use
   cases and adapters are plain classes created with `@Bean` methods in the composition root.
 - Every error goes through one `@RestControllerAdvice`: a new domain error picks its status by
@@ -110,11 +111,14 @@ These exist once S01 creates the Maven project.
 ./mvnw test                    # unit tests
 ./mvnw verify                  # quality gate: format check, unit, integration and architecture tests
 ./mvnw verify -Pnetwork        # also the live scraper smoke tests
-./mvnw spring-boot:run         # run the API on PORT (default 5000)
+./mvnw spring-boot:run         # run the API on server.port (default 5000, profile dev)
 docker compose up -d --wait    # start MongoDB for local runs
 ```
 
 Integration tests use Testcontainers and need Docker running; they do not use the Compose MongoDB.
+
+A `pre-push` git hook in `.githooks/` runs `./mvnw verify` and aborts the push if it fails. Enable it
+once per clone with `git config core.hooksPath .githooks`. Never bypass it with `--no-verify`.
 
 Quality gate:
 

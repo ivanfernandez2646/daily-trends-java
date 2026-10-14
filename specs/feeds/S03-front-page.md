@@ -33,9 +33,9 @@ happens at a time, and a recent run blocks new background runs for a while.
 
 ### Cooldown
 - A background refresh is **not started** if the previous background run **finished** less than
-  `SCRAP_COOLDOWN_SECONDS` (default 300) ago, whatever its outcome: feeds saved, nothing saved, every
-  source failed, or an exception.
-- A refresh at exactly the cooldown or later starts. `0` disables the cooldown.
+  `daily-trends.scraping.cooldown` (default `300s`, S01) ago, whatever its outcome: feeds saved,
+  nothing saved, every source failed, or an exception.
+- A refresh at exactly the cooldown or later starts. `0s` disables the cooldown.
 - The cooldown is measured with the `Clock`.
 - `GET /feed/scrap` ignores the cooldown and does not start it.
 
@@ -90,3 +90,5 @@ happens at a time, and a recent run blocks new background runs for a while.
   - one stale `EL_MUNDO` feed → 200 with that feed; after the background run completes, `/feed/home`
     returns the 10 scraped feeds;
   - every source fails → `/feed/home` keeps answering the stale feed.
+- OpenAPI test: `GET /feed/home` appears in `/v3/api-docs` with a `200` array of the same feed schema
+  as `/feed/scrap`.

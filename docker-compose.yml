@@ -1,4 +1,7 @@
-# MongoDB for local runs. The API service is added by the S01 plan with its Dockerfile.
+# MongoDB for local runs, and the API built from the Dockerfile.
+#   docker compose up -d --wait mongo     # only MongoDB, for ./mvnw spring-boot:run
+#   docker compose up -d --wait --build   # MongoDB and the API
+# SERVER_PORT picks the host port of the API (on macOS, AirPlay uses 5000).
 services:
   mongo:
     image: mongo:8
@@ -11,6 +14,17 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  api:
+    build: .
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: production
+      SPRING_MONGODB_URI: mongodb://mongo:27017/daily-trends-dev
+    ports:
+      - "${SERVER_PORT:-5000}:5000"
 
 volumes:
   mongodb:

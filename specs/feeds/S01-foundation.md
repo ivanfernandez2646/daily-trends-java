@@ -4,11 +4,11 @@
 
 ## Goal
 A running app that starts, reads configuration, connects to Mongo, answers `GET /status`, formats
-errors, and contains the feed domain, search criteria and clock that S02 and S03 use.
+errors, publishes its OpenAPI document, and contains the feed domain, search criteria and clock that S02 and S03 use.
 
 ## Behavior
 - `GET /status` → 200, empty body.
-- Default port `5000` (`PORT`).
+- Default port `5000` (`server.port`).
 - Open CORS (any origin). Response compression.
 - Startup error (invalid configuration, MongoDB unreachable when the app starts) → logged, process
   exits with code 1.
@@ -16,36 +16,65 @@ errors, and contains the feed domain, search criteria and clock that S02 and S03
   `/feed/{id}` route exists yet, but S01 adds a test so a later one cannot shadow them.
 
 ## Configuration
-Read, from highest to lowest priority, from:
-1. process environment variables;
-2. a `.env` file in the working directory, if it exists (a missing file is not an error);
-3. defaults for the current `ENV`;
-4. global defaults.
+Standard Spring Boot configuration: profiles and properties, no custom loader.
 
-- `ENV` itself can come from the environment or from `.env`.
-- The test suite never reads `.env`: tests set their settings explicitly, so a developer's `.env`
+### Profiles
+- Exactly one of `dev`, `test`, `production` is active. `dev` is the default
+  (`spring.profiles.default=dev`). It is selected with `SPRING_PROFILES_ACTIVE` or
+  `--spring.profiles.active`.
+- `application.properties` holds the global defaults; `application-{profile}.properties` holds the
+  defaults of that profile.
+
+### Sources
+Spring Boot's own precedence, from highest to lowest:
+1. command-line arguments;
+2. operating-system environment variables (relaxed binding: `DAILY_TRENDS_TIMEZONE` sets
+   `daily-trends.timezone`);
+3. a local, git-ignored `config/application.properties` (and `config/application-{profile}.properties`)
+   in the working directory, if it exists. Spring Boot loads it by itself; it is the place for a
+   developer's overrides;
+4. `application-{profile}.properties` in the jar;
+5. `application.properties` in the jar.
+
+- The test suite never reads the working-directory `config/` files: tests run with
+  `spring.config.location=classpath:/` and the `test` profile, so a developer's local overrides
   cannot point the tests at another database.
-- `.env.example` lists every variable with its default (exists in the scaffold). `.env` is
-  git-ignored.
-- Implementation hint: `spring.config.import=optional:file:.env[.properties]` loads `.env` as a
-  properties file; operating-system environment variables still take precedence over it.
+- `config/` is git-ignored. The README documents every property with its default.
 
-| Variable | Type | Default | Notes |
-|---|---|---|---|
-| `ENV` | `production` \| `dev` \| `test` | `dev` | Selects the default `MONGO_URL` |
-| `MONGO_URL` | string | `dev`: `mongodb://localhost:27017/daily-trends-dev`; `test`: `mongodb://localhost:27017/daily-trends-test`; `production`: **required** | |
-| `PORT` | integer | `5000` | |
-| `TIMEZONE` | IANA zone id | `Europe/Madrid` | Business timezone |
-| `SCRAP_TIMEOUT_SECONDS` | number > 0 | `10` | Timeout of each scraping request (S02) |
-| `SCRAP_COOLDOWN_SECONDS` | number ≥ 0 | `300` | Minimum time between background runs (S03); `0` disables it |
+### Properties
+| Property | Environment variable | Type | Default | Notes |
+|---|---|---|---|---|
+| `spring.mongodb.uri` | `SPRING_MONGODB_URI` | MongoDB URI | `dev`: `mongodb://localhost:27017/daily-trends-dev`; `test`: `mongodb://localhost:27017/daily-trends-test`; `production`: **required** | |
+| `server.port` | `SERVER_PORT` | integer | `5000` | |
+| `daily-trends.timezone` | `DAILY_TRENDS_TIMEZONE` | IANA zone id | `Europe/Madrid` | Business timezone |
+| `daily-trends.scraping.timeout` | `DAILY_TRENDS_SCRAPING_TIMEOUT` | `Duration` > 0 | `10s` | Timeout of each scraping request (S02) |
+| `daily-trends.scraping.cooldown` | `DAILY_TRENDS_SCRAPING_COOLDOWN` | `Duration` ≥ 0 | `300s` | Minimum time between background runs (S03); `0s` disables it |
 
-- Invalid configuration fails at startup with exit code 1: unknown `ENV`, non-integer `PORT`, unknown
-  `TIMEZONE`, a non-positive timeout, a negative cooldown, or `ENV=production` without `MONGO_URL`.
-- The error names the variable and never echoes the value of `MONGO_URL` (it can contain
+- Durations use Spring Boot's format (`10s`, `500ms`, `5m`, `PT10S`).
+- Invalid configuration fails at startup with exit code 1: no active profile among `dev`, `test`,
+  `production` (or more than one), non-integer `server.port`, unknown `daily-trends.timezone`, a
+  non-positive timeout, a negative cooldown, or the `production` profile without
+  `spring.mongodb.uri`.
+- The error names the property and never echoes the value of `spring.mongodb.uri` (it can contain
   credentials).
-- Settings are one immutable, validated object built in `apps/`. Domain and application code receive
-  the values they need through constructors and never read settings.
-- The Python names are kept on purpose (`SCRAP_*`), so both ports run with the same environment.
+- The `daily-trends.*` properties bind to one immutable, validated `@ConfigurationProperties` record
+  in `apps/`. Domain and application code receive the values they need through constructors and
+  never read configuration.
+- The names follow Spring conventions on purpose; they do not match the Node or Python ports
+  (`ENV`, `MONGO_URL`, `PORT`, `SCRAP_*`, `.env`), see S00.
+
+## OpenAPI
+- The OpenAPI 3.1 document is generated from the code with springdoc-openapi (the version that
+  supports the project's Spring Boot line). No hand-written YAML.
+- `GET /v3/api-docs` → the document as JSON. `GET /swagger-ui.html` → Swagger UI. Both are public in
+  every profile, like the rest of the API.
+- Document info: title `daily-trends API`, the project version.
+- Every route in scope appears with its method, path, success response and body schema. S01
+  documents `GET /status`; S02 and S03 document their routes when they add them.
+- The error body `{"error": "<message>"}` is a named schema (`ErrorResponse`) and every operation
+  documents its `500`. Framework routes (`/v3/api-docs`, Swagger UI) do not appear in the document.
+- springdoc and Swagger annotations live only in `apps/`; `domain` and `application` never import
+  them.
 
 ## Error format
 Body `{"error": "<message>"}` for every error, on every route, mapped by error kind:
@@ -146,10 +175,11 @@ Every route that returns feeds uses this shape, keys in this order:
 
 ## Acceptance criteria
 - `GET /status` → 200, empty body.
-- Settings tests: each precedence level, each default per `ENV`, each invalid value above, the
-  production error does not contain the value of `MONGO_URL`. The quality gate passes with a `.env`
-  present that points `MONGO_URL` elsewhere.
-- A startup test: invalid settings make the app fail to start.
+- Configuration tests: each default per profile, an environment variable overriding a profile
+  default, each invalid value above, the production error does not contain the value of
+  `spring.mongodb.uri`. The quality gate passes with a local `config/application.properties` present
+  that points `spring.mongodb.uri` elsewhere.
+- A startup test: invalid configuration makes the app fail to start.
 - Value-object tests: valid values, invalid values and exact messages, equality.
 - Aggregate tests: `create` records `feed.created` with the given `now`; pulling returns and clears
   events; `fromPrimitives` records none.
@@ -161,5 +191,7 @@ Every route that returns feeds uses this shape, keys in this order:
 - Repository integration tests against MongoDB (Testcontainers): save and search with OR filter,
   order and limit; dates stored as BSON dates and sorted chronologically; `existsHeadline` at the
   edges of the range; a string `createdAt` raises `InvalidStoredFeed`.
+- OpenAPI test: `GET /v3/api-docs` → 200 JSON with `openapi` 3.1.x, the info title, the path
+  `/status` with its `200` response and the `ErrorResponse` schema; Swagger UI answers 200.
 - ArchUnit test: `domain` and `application` do not depend on the libraries listed in `AGENTS.md`.
 - `./mvnw verify` green.

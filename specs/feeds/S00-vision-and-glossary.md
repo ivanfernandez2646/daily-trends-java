@@ -24,7 +24,7 @@ by the later ones.
 
 | Spec | Capability | Depends on | Node origin |
 |---|---|---|---|
-| S01 | Foundation: app startup, configuration, Mongo, error format, `GET /status`, feed domain, criteria, clock | — | `apps/cms/backend`, `contexts/cms/shared`, `feeds/domain` |
+| S01 | Foundation: app startup, configuration, Mongo, error format, OpenAPI, `GET /status`, feed domain, criteria, clock | — | `apps/cms/backend`, `contexts/cms/shared`, `feeds/domain` |
 | S02 | Scrape external sources: `GET /feed/scrap` | S01 | `feeds/application/scrap`, `feeds/infrastructure/scrap`, `scrap-feed.feature` |
 | S03 | Front page: `GET /feed/home` | S01, S02 | `FeedHomeController`, `feeds/application/search`, `home-feed.feature` |
 
@@ -37,7 +37,7 @@ Implementation order is the table order.
 - **Scraped source:** `EL_MUNDO` | `EL_ESPANOL`.
 - **Scrape run:** one execution of every scraper plus the save of the feeds they produced.
 - **Front page (home):** the 10 most recent feeds from scraped sources.
-- **Business timezone:** `TIMEZONE` setting, default `Europe/Madrid`.
+- **Business timezone:** `daily-trends.timezone` property, default `Europe/Madrid`.
 - **Business day:** a calendar day in the business timezone, from local midnight to the next local
   midnight (23 or 25 hours on DST days).
 - **Stale front page:** the newest front-page feed was created on a business day before today.
@@ -46,7 +46,7 @@ Implementation order is the table order.
 - CMS routes: `PUT`, `GET`, `PATCH`, `DELETE /feed/{id}` and `GET /feed/list`. Tests seed feeds
   through the repository.
 - Request body validation (no route in scope reads a body).
-- Mongo migrations and indexes, OpenAPI generation, authentication, pagination, scheduled jobs,
+- Mongo migrations and indexes, authentication, pagination, scheduled jobs,
   several instances, production deployment.
 
 ## Differences from Node
@@ -63,7 +63,9 @@ Each row is intentional. The origin column names the Python port spec that intro
 | No timeout, no `User-Agent`, a meaningless `Content-Type` request header | Configurable timeout, `User-Agent`, no `Content-Type` | I02, I04 |
 | `/feed/home` scrapes inside the request and retries on every request | Background refresh, single flight, cooldown | I03 |
 | "Today" uses the server's `TZ` | Business timezone | I04 |
-| `dev.json` / `test.json` never loaded | Settings with per-`ENV` defaults | I04 |
+| `NODE_ENV` and `dev.json` / `test.json` never loaded | Spring profiles `dev`, `test`, `production` with per-profile defaults | I04 |
+| Hand-written `docs/openapi.yml` served with Swagger UI at `/` | OpenAPI document generated from the code (springdoc) at `/v3/api-docs`, Swagger UI at `/swagger-ui.html` | this port |
+| Settings from `ENV`, `MONGO_URL`, `PORT`, `SCRAP_*` and a `.env` file (also in the Python port) | Spring Boot properties (`spring.mongodb.uri`, `server.port`, `daily-trends.*`), overridden by environment variables or a git-ignored `config/application.properties`; no `.env` | this port |
 | Criteria shaped like a Mongo query; dates stored and sorted as text | Domain `Criteria`; BSON dates, chronological order | I05 |
 | A 500 shows the internal error message; invalid stored data can answer 400 | Generic 500 body; invalid stored data is always a 500 | I01, I08 |
 | Date-time errors name `<Function>` | They name the value object | I01 |

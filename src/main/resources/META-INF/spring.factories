@@ -1,0 +1,5 @@
+org.springframework.boot.EnvironmentPostProcessor=\
+com.ivanfernandez.dailytrends.apps.cmsbackend.config.ConfigurationGuard
+
+org.springframework.boot.diagnostics.FailureAnalyzer=\
+com.ivanfernandez.dailytrends.apps.cmsbackend.config.InvalidConfigurationFailureAnalyzer
