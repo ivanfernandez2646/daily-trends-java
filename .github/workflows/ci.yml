@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      # Proves the tests never read a developer's local overrides: any test that loaded this file
+      # would run as production against an unreachable MongoDB.
+      - name: Write a decoy local configuration
+        run: |
+          mkdir -p config
+          cat > config/application.properties <<'PROPS'
+          spring.profiles.active=production
+          spring.mongodb.uri=mongodb://unreachable.invalid:1/decoy
+          daily-trends.timezone=Pacific/Kiritimati
+          PROPS
+
+      - name: Quality gate
+        run: ./mvnw --batch-mode verify
