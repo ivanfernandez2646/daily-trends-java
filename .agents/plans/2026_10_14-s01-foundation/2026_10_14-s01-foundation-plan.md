@@ -7,7 +7,7 @@ created_at: '2026-10-14T12:29:53Z'
 created_by:
   tool: 'Claude Code'
   model: 'claude-opus-5-5'
-updated_at: '2026-10-14T12:58:38Z'
+updated_at: '2026-10-14T13:03:24Z'
 implemented_phases:
   - phase: 1
     implemented_at: '2026-10-14T14:10:00Z'
@@ -19,6 +19,10 @@ implemented_phases:
     model: 'claude-opus-5-5'
   - phase: 3
     implemented_at: '2026-10-14T12:58:38Z'
+    tool: 'Claude Code'
+    model: 'claude-opus-5-5'
+  - phase: 4
+    implemented_at: '2026-10-14T13:03:24Z'
     tool: 'Claude Code'
     model: 'claude-opus-5-5'
 ---
@@ -414,47 +418,69 @@ shape for S02 and S03.
 
 ### Tests first
 
-- [ ] `FeedIdTest`:
+- [x] `FeedIdTest`:
   - v1, v4, v5, upper case and nil are accepted;
   - v7, a non-UUID, `""` and `null` are rejected with the exact message (`<null>` for `null`);
   - equality by value.
-- [ ] `FeedTitleTest` and `FeedAuthorTest`:
+- [x] `FeedTitleTest` and `FeedAuthorTest`:
   - `null`, `""` and `"   "` are rejected with the exact message;
   - `" a "` is kept untrimmed;
   - equality.
-- [ ] `FeedDescriptionTest`: `null` and `""` are accepted; equality.
-- [ ] `FeedCreatedAtTest`:
+- [x] `FeedDescriptionTest`: `null` and `""` are accepted; equality.
+- [x] `FeedCreatedAtTest`:
   - a value with nanoseconds is truncated to milliseconds;
   - `null` is rejected with `<FeedCreatedAt> does not allow the value <null>`;
   - equality.
-- [ ] `FeedUpdatedAtTest`: `null` is accepted; truncation; equality.
-- [ ] `FeedTest`:
+- [x] `FeedUpdatedAtTest`: `null` is accepted; truncation; equality.
+- [x] `FeedTest`:
   - `create` sets `createdAt = now` (truncated) and `updatedAt = null`, and records one
     `feed.created` event with `aggregateId`, `title` and `occurredOn = now`;
   - `pullDomainEvents` returns the events, and a second pull is empty;
   - `fromPrimitives` records no events and round-trips with `toPrimitives`;
   - equality by `id` only.
-- [ ] `InMemoryEventBusTest`:
+- [x] `InMemoryEventBusTest`:
   - a subscriber of `FeedCreatedDomainEvent` receives the published event;
   - publishing with no subscribers is a no-op.
-- [ ] `SystemClockTest`: `zone()` returns the configured zone, and `now()` is between two
+- [x] `SystemClockTest`: `zone()` returns the configured zone, and `now()` is between two
   `Instant.now()` readings.
-- [ ] `FeedResponseJsonTest` (the app's Jackson `JsonMapper`):
+- [x] `FeedResponseJsonIT` (the app's Jackson `JsonMapper`):
   - keys in order `id, title, description, author, source, created_at, updated_at`;
   - `2026-10-12T08:00:00Z` without a fraction and `2026-10-12T08:00:00.123Z` with milliseconds;
   - `description` and `updated_at` written as `null`.
 
 ### Implementation
 
-- [ ] Shared kernel types and adapters listed above.
-- [ ] Feed value objects, `FeedPrimitives`, `Feed`, `FeedCreatedDomainEvent`.
-- [ ] `FeedResponse`.
-- [ ] Composition root `apps/cmsbackend/config/SharedConfiguration`: `Clock` `@Bean`
+- [x] Shared kernel types and adapters listed above.
+- [x] Feed value objects, `FeedPrimitives`, `Feed`, `FeedCreatedDomainEvent`.
+- [x] `FeedResponse`.
+- [x] Composition root `apps/cmsbackend/config/SharedConfiguration`: `Clock` `@Bean`
   (`new SystemClock(properties.timezone())`) and `EventBus` `@Bean` (`new InMemoryEventBus(List.of())`).
-- [ ] Object Mothers and `FixedClock` in test sources.
-- [ ] Refactor without changing behavior.
-- [ ] Run `./mvnw verify` (including `ArchitectureTest`) and fix failures.
-- [ ] STOP for user review. Suggest three Conventional Commit messages.
+- [x] Object Mothers and `FixedClock` in test sources.
+- [x] Refactor without changing behavior.
+- [x] Run `./mvnw verify` (including `ArchitectureTest`) and fix failures.
+- [x] STOP for user review. Suggest three Conventional Commit messages.
+
+### Implementation notes
+
+- **Object Mothers:** `MotherCreator` (`contexts/cms/shared/domain` in test sources) uses only the
+  JDK (`UUID`, `ThreadLocalRandom`, a small word list); no Datafaker dependency. The mothers are
+  `FeedMother`, `FeedPrimitivesMother`, `FeedIdMother`, `FeedTitleMother`, `FeedAuthorMother` and
+  `FeedDescriptionMother`:
+  - `FeedMother.random()` is a stored feed with no events;
+  - `FeedMother.created(now)` records `feed.created`.
+- **`FixedClock`** lives in `contexts/cms/shared/fakes`. It has `at(String)` and
+  `advance(Duration)`, and is synchronized for the S03 concurrency tests.
+- **JSON test:** `FeedResponseJsonIT` replaces `FeedResponseJsonTest`. It uses the application's
+  own `JsonMapper` and compares the exact string, which also checks key order. Jackson 3's defaults
+  already give `…:00Z` / `…:00.123Z` and write `null`; no Jackson configuration was needed.
+- **Tests that pass `null` to a non-null parameter** (`FeedId`, `FeedTitle`, `FeedAuthor`,
+  `FeedCreatedAt`) carry `@SuppressWarnings("NullAway")`: rejecting that `null` is the behavior
+  under test.
+- **`DomainEvent.eventId()`** returns `java.util.UUID`, and `occurredOn` is the given `now`
+  untruncated. `FeedCreatedAt` truncates to milliseconds.
+- **Composition root:** `SharedConfiguration` provides `Clock` (`SystemClock` in the configured
+  zone) and `EventBus` (`InMemoryEventBus` with no subscribers). `CmsBackendApplicationIT` checks
+  both beans.
 
 ## Phase 5: Criteria and MongoDB persistence
 
@@ -601,4 +627,4 @@ Compose, the image build in CI, and updated docs.
 ## Next step
 
 Run `/ai-project-implement-phase .agents/plans/2026_10_14-s01-foundation/2026_10_14-s01-foundation-plan.md`
-to implement Phase 4 (feed domain, events, clock and JSON). Phase 3 is done and awaits review.
+to implement Phase 5 (criteria and MongoDB persistence). Phase 4 is done and awaits review.
