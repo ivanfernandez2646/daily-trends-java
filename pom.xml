@@ -90,7 +90,7 @@
                     <compilerArgs combine.children="append">
                         <arg>-XDcompilePolicy=simple</arg>
                         <arg>--should-stop=ifError=FLOW</arg>
-                        <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=com.ivanfernandez.dailytrends</arg>
+                        <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=com.ivanfernandez.dailytrends -XepOpt:NullAway:HandleTestAssertionLibraries=true</arg>
                     </compilerArgs>
                     <annotationProcessorPaths>
                         <path>

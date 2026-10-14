@@ -7,10 +7,14 @@ created_at: '2026-10-14T12:29:53Z'
 created_by:
   tool: 'Claude Code'
   model: 'claude-opus-5-5'
-updated_at: '2026-10-14T14:10:00Z'
+updated_at: '2026-10-14T12:54:14Z'
 implemented_phases:
   - phase: 1
     implemented_at: '2026-10-14T14:10:00Z'
+    tool: 'Claude Code'
+    model: 'claude-opus-5-5'
+  - phase: 2
+    implemented_at: '2026-10-14T12:54:14Z'
     tool: 'Claude Code'
     model: 'claude-opus-5-5'
 ---
@@ -216,47 +220,69 @@ code 1. Tests never read the working-directory `config/` files.
 
 ### Tests first
 
-- [ ] `DailyTrendsPropertiesTest` (unit, Spring `Binder` over a `MapConfigurationPropertySource`):
+- [x] `DailyTrendsPropertiesTest` (unit, Spring `Binder` over a `MapConfigurationPropertySource`):
   - the values bind;
   - `500ms` and `PT10S` are accepted;
   - `cooldown=0s` is valid;
   - `timeout` of `0s` and of `-1s`, `cooldown=-1s` and an unknown `timezone` each fail, naming the
     property.
-- [ ] `ConfigurationGuardTest` (unit, `MockEnvironment`):
+- [x] `ConfigurationGuardTest` (unit, `MockEnvironment`):
   - `dev`, `test`, and `production` with a URI pass;
   - an unknown profile (`prod`) fails;
   - two known profiles fail;
   - `production` without `spring.mongodb.uri` fails, naming the property.
   - When `spring.mongodb.uri=mongodb://user:secret@host/db` is set and the profile is invalid, the
     message does not contain `secret`.
-- [ ] `ProfileDefaultsTest` (`SpringApplication` with a fake `systemEnvironment` source and
+- [x] `ProfileDefaultsIT` (`SpringApplication` with a fake `systemEnvironment` source and
   `spring.config.location=classpath:/`, no web server, no MongoDB auto-configuration):
   - global defaults;
   - the URI default for `dev` (no profile given) and for `test`;
   - an environment variable (`DAILY_TRENDS_TIMEZONE`, `SPRING_MONGODB_URI`) beats the profile
     default.
-- [ ] `ApplicationStartupTest`:
+- [x] `ApplicationStartupIT`:
   - `SpringApplication` run with `--spring.profiles.active=prod` fails with `InvalidConfiguration`
     naming `spring.profiles.active`;
   - run with `--server.port=abc` fails;
-  - run with `spring.mongodb.uri=mongodb://localhost:1/x?serverSelectionTimeoutMS=200` fails on
-    startup.
-- [ ] `TestIsolationTest` (`@IntegrationTest`): no property source in the environment comes from a
+  - run with `spring.mongodb.uri=mongodb://localhost:1/x` fails on startup with a
+    `MongoTimeoutException` (after the 5 s server selection timeout).
+- [x] `ConfigIsolationIT` (`@IntegrationTest`): no property source in the environment comes from a
   `file:` location, and the active profile is `test`.
 
 ### Implementation
 
-- [ ] `DailyTrendsProperties` and `Scraping`, enabled from the composition root
+- [x] `DailyTrendsProperties` and `Scraping`, enabled from the composition root
   (`@EnableConfigurationProperties`).
-- [ ] `InvalidConfiguration`, `ConfigurationGuard`, `InvalidConfigurationFailureAnalyzer`.
-- [ ] `daily-trends.*` defaults in `application.properties`.
-- [ ] `apps/cmsbackend/config/MongoConfiguration`:
+- [x] `InvalidConfiguration`, `ConfigurationGuard`, `InvalidConfigurationFailureAnalyzer`.
+- [x] `daily-trends.*` defaults in `application.properties`.
+- [x] `apps/cmsbackend/config/MongoConfiguration`:
   - `MongoClientSettingsBuilderCustomizer` with the 5 s server selection timeout;
   - a startup `ping` bean that fails startup if MongoDB is unreachable.
-- [ ] Refactor without changing behavior.
-- [ ] Run `./mvnw verify` with and without a decoy `config/application.properties` in the working
+- [x] Refactor without changing behavior.
+- [x] Run `./mvnw verify` with and without a decoy `config/application.properties` in the working
   directory, and fix failures.
-- [ ] STOP for user review. Suggest three Conventional Commit messages.
+- [x] STOP for user review. Suggest three Conventional Commit messages.
+
+### Implementation notes
+
+- Spring-starting tests are `*IT`. The isolation test is `ConfigIsolationIT`, not `TestIsolationIT`:
+  Surefire includes `Test*` classes by default, so that name ran it twice.
+- Added `InvalidConfigurationFailureAnalyzerTest` (unit): the description names the property and the
+  action names the environment variable.
+- `DailyTrendsProperties` is enabled with `@EnableConfigurationProperties` on
+  `CmsBackendApplication`. The records validate in their compact constructors and their messages
+  name the full property (`daily-trends.scraping.timeout must be greater than zero`).
+- `ConfigurationGuard` reads `getActiveProfiles()`, falling back to the default profiles
+  (`spring.profiles.default=dev`). Its messages name the property and the allowed profiles, never a
+  configured value.
+- The Mongo startup check is a `SmartInitializingSingleton`, so it runs before the web server
+  accepts requests. The 5 s server selection timeout also applies to every repository call.
+- NullAway runs with `HandleTestAssertionLibraries=true`, so AssertJ `isNotNull()` counts as a null
+  check in tests.
+- Checked by hand with the packaged jar, each case exiting with code 1:
+  - `--spring.profiles.active=prod` prints the failure analysis;
+  - the `production` profile without `SPRING_MONGODB_URI`;
+  - MongoDB unreachable after 5 s.
+- `./mvnw verify` passes with and without the decoy `config/application.properties`.
 
 ## Phase 3: Error format
 
@@ -555,4 +581,4 @@ Compose, the image build in CI, and updated docs.
 ## Next step
 
 Run `/ai-project-implement-phase .agents/plans/2026_10_14-s01-foundation/2026_10_14-s01-foundation-plan.md`
-to implement Phase 2 (configuration and startup failures). Phase 1 is done and awaits review.
+to implement Phase 3 (error format). Phase 2 is done and awaits review.
