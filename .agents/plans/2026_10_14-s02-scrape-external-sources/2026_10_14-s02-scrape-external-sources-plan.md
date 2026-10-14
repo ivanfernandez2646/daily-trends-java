@@ -7,7 +7,7 @@ created_at: '2026-10-14T16:19:31Z'
 created_by:
   tool: 'Claude Code'
   model: 'claude-opus-5-5'
-updated_at: '2026-10-14T16:31:05Z'
+updated_at: '2026-10-14T16:36:47Z'
 implemented_phases:
   - phase: 1
     implemented_at: '2026-10-14T16:27:06Z'
@@ -15,6 +15,10 @@ implemented_phases:
     model: 'claude-opus-5-5'
   - phase: 2
     implemented_at: '2026-10-14T16:31:05Z'
+    tool: 'Claude Code'
+    model: 'claude-opus-5-5'
+  - phase: 3
+    implemented_at: '2026-10-14T16:36:47Z'
     tool: 'Claude Code'
     model: 'claude-opus-5-5'
 ---
@@ -287,7 +291,7 @@ and create feeds. Extraction is tested with HTML fixtures, and live smoke tests 
 
 ### Tests first
 
-- [ ] `FrontPageExtractorTest` (`Jsoup.parse` of fixtures):
+- [x] `FrontPageExtractorTest` (`Jsoup.parse` of fixtures):
   - articles in document order;
   - at most 5, counting only extracted articles (skipped ones do not count);
   - skips an article with no author element, a blank author, no title element or a blank title;
@@ -295,28 +299,52 @@ and create feeds. Extraction is tested with HTML fixtures, and live smoke tests 
   - several matches of one selector are joined with a space (`<a>Ana</a><a>Luis</a>` → `Ana Luis`);
   - inner whitespace is collapsed and the text is trimmed;
   - a page with no `article` → `[]`.
-- [ ] `ElMundoFrontPageScraperTest` (`extract(Jsoup.parse(fixture))`, `FixedClock`):
+- [x] `ElMundoFrontPageScraperTest` (`extract(Jsoup.parse(fixture))`, `FixedClock`):
   - the feeds have source `EL_MUNDO`, `createdAt` from the clock, `updatedAt` `null`, distinct v4
     ids and a recorded `feed.created`;
   - the El Mundo selectors read author, title and description;
   - cleanup, parameterized: `"Crucigrama."` → `"Crucigrama"`, `"Sudoku..."` → `"Sudoku.."`,
     `"¿Qué pasa?"` unchanged, `"."` → `null`.
-- [ ] `ElEspanolFrontPageScraperTest`: source `EL_ESPANOL`, its selectors, and `"Crucigrama."`
+- [x] `ElEspanolFrontPageScraperTest`: source `EL_ESPANOL`, its selectors, and `"Crucigrama."`
   kept as is.
-- [ ] `FrontPageScrapersNetworkIT`, `@Tag("network")`, real `JsoupPageDownloader` with a 10 s
+- [x] `FrontPageScrapersNetworkIT`, `@Tag("network")`, real `JsoupPageDownloader` with a 10 s
   timeout. One test per scraper: 5 feeds with the scraper's source and non-blank author and title.
   It runs only with `./mvnw verify -Pnetwork`.
 
 ### Implementation
 
-- [ ] Add `ScrapedArticle` and `FrontPageExtractor`.
-- [ ] Add both source scrapers.
-- [ ] Refactor: if the `ScrapedArticle` → `Feed` mapping is duplicated, move it to a method on
+- [x] Add `ScrapedArticle` and `FrontPageExtractor`.
+- [x] Add both source scrapers.
+- [x] Refactor: if the `ScrapedArticle` → `Feed` mapping is duplicated, move it to a method on
   `ScrapedArticle` (for example `toFeed(FeedSource, Instant)`).
-- [ ] Run `./mvnw verify` and fix failures. Run `./mvnw verify -Pnetwork` once and report the result.
+- [x] Run `./mvnw verify` and fix failures. Run `./mvnw verify -Pnetwork` once and report the result.
   If El Mundo yields fewer than 5 feeds, check whether jsoup's default `maxBodySize` truncates the page
   before changing anything.
-- [ ] STOP for user review. Suggest three Conventional Commit messages.
+- [x] STOP for user review. Suggest three Conventional Commit messages.
+
+### Implementation notes
+
+- **Refactor applied.** `ScrapedArticle` owns the mapping, `toFeed(FeedSource, Instant)`, and
+  `cleanDescription(UnaryOperator<String>)`, which turns a blank cleaned description into `null`. Each
+  source scraper only declares its URL, selectors and, for El Mundo, `removeTrailingPeriod`. All the
+  feeds of one call share one `clock.now()`.
+- **"Several matches" means several matching elements.** `Elements.text()` joins matches with a space,
+  but adjacent inline children of one match have no space between them (`<span><a>Ana</a><a>Luis</a></span>`
+  matched by `span` → `AnaLuis`). The walk fixture uses two elements that match the author selector,
+  as El Mundo's `byline-name .link` does with several links.
+- **The El Mundo fixture wraps the headline in a `.ue-c-cover-content__link`**, as the real page does, to
+  prove that the author selector reads the byline only.
+- **Live run (`./mvnw verify -Pnetwork`, 2026-10-14): 2/2 passed.** On the real pages:
+  - El Mundo's `iso-8859-15` decodes correctly (`RAÚL PIÑA`, `Sánchez`);
+  - El Español articles without a subtitle give `null`;
+  - `maxBodySize` truncation was not an issue.
+- **Observed on the real pages, consistent with the spec, for a later decision:**
+  - several authors read as one string (`RAÚL PIÑA MARTA BELVER`);
+  - one El Español article had two `.art__title` elements (the main headline and a related one), and
+    both ended up in its title.
+
+  Both follow the agreed `Elements.text()` rule; Cheerio concatenated the same matches without a
+  space. Changing either (first match only, a separator between authors) needs an improvement spec.
 
 ## Phase 4: `GET /feed/scrap`, wiring and acceptance
 
@@ -372,6 +400,6 @@ OpenAPI.
 
 ## Next step
 
-Phases 1 and 2 are implemented. After review, run `/ai-project-implement-phase` for Phase 3. After the last phase, review and commit, push
+Phases 1 to 3 are implemented. After review, run `/ai-project-implement-phase` for Phase 4. After the last phase, review and commit, push
 `feat/s02-scrape-external-sources` (the pre-push hook runs the quality gate) and open a pull request
 to `main`. Then plan S03 with `/ai-project-create-plan specs/feeds/S03-front-page.md`.

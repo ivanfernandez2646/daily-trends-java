@@ -20,7 +20,6 @@ import com.ivanfernandez.dailytrends.contexts.cms.feeds.domain.FeedTitle;
 import com.ivanfernandez.dailytrends.contexts.cms.feeds.domain.FrontPageScraper;
 import com.ivanfernandez.dailytrends.contexts.cms.feeds.fakes.FakeFrontPageScraper;
 import com.ivanfernandez.dailytrends.contexts.cms.feeds.fakes.InMemoryFeedRepository;
-import com.ivanfernandez.dailytrends.contexts.cms.shared.domain.DomainEvent;
 import com.ivanfernandez.dailytrends.contexts.cms.shared.domain.criteria.Criteria;
 import com.ivanfernandez.dailytrends.contexts.cms.shared.fakes.FixedClock;
 import com.ivanfernandez.dailytrends.contexts.cms.shared.fakes.RecordingEventBus;
@@ -37,7 +36,7 @@ import org.slf4j.LoggerFactory;
 
 class FeedScraperTest {
 
-    private static final Executor SAME_THREAD = Runnable::run;
+    private static final Executor SAME_THREAD = task -> task.run();
 
     private final FixedClock clock = FixedClock.at("2026-10-14T08:00:00Z");
     private final InMemoryFeedRepository repository = new InMemoryFeedRepository();
@@ -64,7 +63,7 @@ class FeedScraperTest {
         List<Feed> saved = feedScraper.scrape();
 
         assertThat(titlesOf(saved)).containsExactly("Mundo 1", "Mundo 2", "Español 1");
-        assertThat(saved).extracting(Feed::source).containsExactly(EL_MUNDO, EL_MUNDO, EL_ESPANOL);
+        assertThat(saved).extracting(feed -> feed.source()).containsExactly(EL_MUNDO, EL_MUNDO, EL_ESPANOL);
         assertThat(repository.all()).containsExactlyInAnyOrderElementsOf(saved);
         assertThatPublishedFeedCreatedFor(saved);
     }
@@ -192,7 +191,7 @@ class FeedScraperTest {
 
             List<Feed> saved = feedScraper.scrape();
 
-            assertThat(saved).extracting(Feed::source).containsExactly(EL_MUNDO, EL_ESPANOL);
+            assertThat(saved).extracting(feed -> feed.source()).containsExactly(EL_MUNDO, EL_ESPANOL);
         }
     }
 
@@ -230,7 +229,7 @@ class FeedScraperTest {
     private void assertThatPublishedFeedCreatedFor(List<Feed> feeds) {
         assertThat(eventBus.published())
                 .allSatisfy(event -> assertThat(event).isInstanceOf(FeedCreatedDomainEvent.class))
-                .extracting(DomainEvent::aggregateId)
+                .extracting(event -> event.aggregateId())
                 .containsExactlyElementsOf(
                         feeds.stream().map(feed -> feed.id().value()).toList());
     }
