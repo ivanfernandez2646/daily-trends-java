@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$CLAUDE_TOOL_INPUT_FILE_PATH\" == *.java && -x ./mvnw ]]; then ./mvnw -q -o spotless:apply -DspotlessFiles=\"$CLAUDE_TOOL_INPUT_FILE_PATH\" >/dev/null 2>&1; fi; true"
+          }
+        ]
+      }
+    ]
+  }
+}

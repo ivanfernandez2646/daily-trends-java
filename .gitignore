@@ -1,0 +1,19 @@
+# Build output
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Read-only reference copy of the Node project
+reference/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Personal Claude Code config, IDE and OS files
+.claude/settings.local.json
+.claude/worktrees/
+.idea/
+*.iml
+.vscode/
+.DS_Store
