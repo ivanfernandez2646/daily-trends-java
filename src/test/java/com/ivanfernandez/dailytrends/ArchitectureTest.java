@@ -28,9 +28,7 @@ class ArchitectureTest {
                     "org.jsoup..",
                     "java.net..",
                     "org.springdoc..",
-                    "io.swagger..")
-            // No domain or application code exists until the feed domain is added.
-            .allowEmptyShould(true);
+                    "io.swagger..");
 
     @ArchTest
     static final ArchRule stereotypes_only_in_apps = noClasses()

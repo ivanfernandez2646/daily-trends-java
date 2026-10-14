@@ -7,7 +7,7 @@ created_at: '2026-10-14T12:29:53Z'
 created_by:
   tool: 'Claude Code'
   model: 'claude-opus-5-5'
-updated_at: '2026-10-14T12:54:14Z'
+updated_at: '2026-10-14T12:58:38Z'
 implemented_phases:
   - phase: 1
     implemented_at: '2026-10-14T14:10:00Z'
@@ -15,6 +15,10 @@ implemented_phases:
     model: 'claude-opus-5-5'
   - phase: 2
     implemented_at: '2026-10-14T12:54:14Z'
+    tool: 'Claude Code'
+    model: 'claude-opus-5-5'
+  - phase: 3
+    implemented_at: '2026-10-14T12:58:38Z'
     tool: 'Claude Code'
     model: 'claude-opus-5-5'
 ---
@@ -178,8 +182,8 @@ the quality gate from the first commit. Configuration validation arrives in Phas
 - NullAway runs as `ERROR` on `com.ivanfernandez.dailytrends`; checked with a probe that returns
   `null` from a non-null method (compilation fails). The `@SpringBootTest` ArchUnit rule was checked
   with a probe class too.
-- The domain/application ArchUnit rule uses `allowEmptyShould(true)` because those packages are
-  empty until Phase 4; remove it once domain classes exist.
+- The domain/application ArchUnit rule used `allowEmptyShould(true)` while those packages were
+  empty; Phase 3 removed it.
 - JaCoCo merges unit and integration data (`jacoco.exec`, `jacoco-it.exec`) into one report.
 - `./mvnw verify` passes with a decoy `config/application.properties` (production profile,
   unreachable MongoDB) in the working directory.
@@ -316,7 +320,7 @@ path. A guard test keeps `/feed/scrap` and `/feed/home` from being shadowed by a
 
 ### Tests first
 
-- [ ] `ErrorHandlingTest`, using a test-only controller imported through `@TestConfiguration` that
+- [x] `ErrorHandlingIT`, using a test-only controller imported through `@TestConfiguration` that
   throws each kind. Each case checks the status and the exact body:
   - an `InvalidArgumentError` subclass returns 400 with its message;
   - a `NotFoundError` subclass returns 404 with its message;
@@ -325,22 +329,38 @@ path. A guard test keeps `/feed/scrap` and `/feed/home` from being shadowed by a
     body does not contain `password`;
   - the 500 is logged once at `ERROR` with the method, the path and the stack trace (captured with
     `OutputCaptureExtension`).
-- [ ] `ErrorHandlingTest`, framework errors:
+- [x] `ErrorHandlingIT`, framework errors:
   - `GET /nope` returns 404 with `{"error": "Not Found"}`;
   - `POST /status` returns 405 with `{"error": "Method Not Allowed"}`.
-- [ ] `FixedFeedRoutesTest`: for `GET /feed/scrap` and `GET /feed/home`, every handler mapping in
+- [x] `FixedFeedRoutesIT`: for `GET /feed/scrap` and `GET /feed/home`, every handler mapping in
   `RequestMappingHandlerMapping` that matches the path has a literal pattern (no `{…}`). It passes
   trivially today and guards S02, S03 and a later `/feed/{id}`.
 
 ### Implementation
 
-- [ ] Error kinds in `contexts/cms/shared/domain`.
-- [ ] `ErrorResponse` and `ApiExceptionHandler`. Log the 500 with SLF4J at `ERROR`, with the method,
+- [x] Error kinds in `contexts/cms/shared/domain`.
+- [x] `ErrorResponse` and `ApiExceptionHandler`. Log the 500 with SLF4J at `ERROR`, with the method,
   the path and the exception.
-- [ ] `spring.web.resources.add-mappings=false` in `application.properties`.
-- [ ] Refactor without changing behavior.
-- [ ] Run `./mvnw verify` and fix failures.
-- [ ] STOP for user review. Suggest three Conventional Commit messages.
+- [x] `spring.web.resources.add-mappings=false` in `application.properties`.
+- [x] Refactor without changing behavior.
+- [x] Run `./mvnw verify` and fix failures.
+- [x] STOP for user review. Suggest three Conventional Commit messages.
+
+### Implementation notes
+
+- Spring-starting tests are `*IT`: `ErrorHandlingIT` and `FixedFeedRoutesIT`. The probe controller
+  and the probe error subclasses are nested in `ErrorHandlingIT` and imported with `@Import`.
+- One `@ExceptionHandler(Exception.class)` handles both framework errors and unexpected ones:
+  - any exception implementing Spring's `org.springframework.web.ErrorResponse` keeps its status and
+    headers (for example `Allow` on a 405), and its body is the reason phrase;
+  - everything else is logged once at `ERROR` (`Unhandled error on GET /path`, with the stack trace)
+    and answers the generic 500.
+- NullAway treats `Throwable.getMessage()` as nullable, so the handler falls back to `""`. The error
+  kinds always receive a message.
+- `FixedFeedRoutesIT` was checked with a temporary `/feed/{id}` controller: it fails, naming the
+  pattern.
+- The domain/application ArchUnit rule no longer needs `allowEmptyShould`, because
+  `contexts/cms/shared/domain` now has classes.
 
 ## Phase 4: Feed domain, events, clock and JSON
 
@@ -581,4 +601,4 @@ Compose, the image build in CI, and updated docs.
 ## Next step
 
 Run `/ai-project-implement-phase .agents/plans/2026_10_14-s01-foundation/2026_10_14-s01-foundation-plan.md`
-to implement Phase 3 (error format). Phase 2 is done and awaits review.
+to implement Phase 4 (feed domain, events, clock and JSON). Phase 3 is done and awaits review.
