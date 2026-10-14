@@ -1,19 +1,11 @@
 package com.ivanfernandez.dailytrends.contexts.cms.feeds.domain;
 
-import com.ivanfernandez.dailytrends.contexts.cms.shared.domain.MotherCreator;
-
+/** Shortcut for tests that work with primitives; variations go through {@link FeedMother#builder()}. */
 public final class FeedPrimitivesMother {
 
     private FeedPrimitivesMother() {}
 
     public static FeedPrimitives random() {
-        return new FeedPrimitives(
-                MotherCreator.uuid(),
-                MotherCreator.words(3),
-                MotherCreator.words(8),
-                MotherCreator.words(2),
-                MotherCreator.oneOf(FeedSource.values()),
-                MotherCreator.instant(),
-                null);
+        return FeedMother.builder().primitives();
     }
 }

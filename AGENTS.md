@@ -117,6 +117,9 @@ docker compose up -d --wait    # start MongoDB for local runs
 
 Integration tests use Testcontainers and need Docker running; they do not use the Compose MongoDB.
 
+A `pre-push` git hook in `.githooks/` runs `./mvnw verify` and aborts the push if it fails. Enable it
+once per clone with `git config core.hooksPath .githooks`. Never bypass it with `--no-verify`.
+
 Quality gate:
 
 ```bash

@@ -6,6 +6,12 @@ import java.time.Duration;
 import java.time.ZoneId;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+/**
+ * Settings of the daily-trends API.
+ *
+ * @param timezone business timezone: it defines "today" and "the same day"
+ * @param scraping scraping settings
+ */
 @ConfigurationProperties("daily-trends")
 public record DailyTrendsProperties(ZoneId timezone, Scraping scraping) {
 
@@ -14,6 +20,12 @@ public record DailyTrendsProperties(ZoneId timezone, Scraping scraping) {
         requireNonNull(scraping, "daily-trends.scraping is required");
     }
 
+    /**
+     * Scraping settings.
+     *
+     * @param timeout timeout of each scraping request
+     * @param cooldown minimum time between background front page refreshes; 0 disables it
+     */
     public record Scraping(Duration timeout, Duration cooldown) {
 
         public Scraping {

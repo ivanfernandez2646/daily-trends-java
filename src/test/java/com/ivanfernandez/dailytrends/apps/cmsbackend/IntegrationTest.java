@@ -15,7 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@SpringBootTest(properties = "spring.config.location=classpath:/")
+@SpringBootTest(classes = CmsBackendApplication.class, properties = "spring.config.location=classpath:/")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(TestcontainersConfiguration.class)

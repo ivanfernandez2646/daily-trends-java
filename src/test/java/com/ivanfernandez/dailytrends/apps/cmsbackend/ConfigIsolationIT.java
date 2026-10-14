@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.PropertySource;
 
 @IntegrationTest
 class ConfigIsolationIT {
@@ -15,7 +14,7 @@ class ConfigIsolationIT {
 
     @Test
     void reads_no_configuration_from_the_working_directory() {
-        assertThat(environment.getPropertySources().stream().map(PropertySource::getName))
+        assertThat(environment.getPropertySources().stream().map(source -> source.getName()))
                 .noneMatch(name -> name.contains("file ["));
     }
 

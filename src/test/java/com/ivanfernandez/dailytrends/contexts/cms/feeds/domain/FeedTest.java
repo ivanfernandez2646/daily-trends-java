@@ -67,19 +67,12 @@ class FeedTest {
 
     @Test
     void is_equal_by_id_only() {
-        FeedPrimitives primitives = FeedPrimitivesMother.random();
-        var sameIdOtherTitle = new FeedPrimitives(
-                primitives.id(),
-                "Another title",
-                primitives.description(),
-                primitives.author(),
-                primitives.source(),
-                primitives.createdAt(),
-                primitives.updatedAt());
+        Feed feed = FeedMother.random();
+        Feed sameIdOtherValues = FeedMother.builder().id(feed.id().value()).build();
 
-        assertThat(Feed.fromPrimitives(primitives))
-                .isEqualTo(Feed.fromPrimitives(sameIdOtherTitle))
-                .hasSameHashCodeAs(Feed.fromPrimitives(sameIdOtherTitle))
+        assertThat(feed)
+                .isEqualTo(sameIdOtherValues)
+                .hasSameHashCodeAs(sameIdOtherValues)
                 .isNotEqualTo(FeedMother.random());
     }
 }

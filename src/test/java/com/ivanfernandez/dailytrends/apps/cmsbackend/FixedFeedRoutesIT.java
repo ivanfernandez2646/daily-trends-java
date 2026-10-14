@@ -8,7 +8,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import org.springframework.web.util.ServletRequestPathUtils;
 
@@ -29,7 +28,7 @@ class FixedFeedRoutesIT {
         var matchingPatterns = handlerMapping.getHandlerMethods().keySet().stream()
                 .map(info -> info.getMatchingCondition(request))
                 .filter(Objects::nonNull)
-                .map(RequestMappingInfo::getPatternValues)
+                .map(info -> info.getPatternValues())
                 .flatMap(patterns -> patterns.stream());
 
         assertThat(matchingPatterns).allMatch(pattern -> !pattern.contains("{") && !pattern.contains("*"));

@@ -37,9 +37,18 @@ June 2026, so a migration starting now targets the 4.x line.
 Requirements: JDK 25 (for example `sdk install java 25-tem`), Docker (MongoDB and Testcontainers).
 
 ```bash
+git config core.hooksPath .githooks   # once per clone: run ./mvnw verify before every push
 docker compose up -d --wait   # MongoDB on localhost:27017
 ./mvnw verify                 # quality gate (available once S01 is implemented)
 ./mvnw spring-boot:run        # API on http://localhost:5000
+```
+
+Integration tests (`*IT`) start MongoDB with Testcontainers and need Docker. With OrbStack, which
+does not create `/var/run/docker.sock` by default, point Testcontainers at its socket once in
+`~/.testcontainers.properties`:
+
+```properties
+docker.host=unix:///Users/<you>/.orbstack/run/docker.sock
 ```
 
 ### Configuration

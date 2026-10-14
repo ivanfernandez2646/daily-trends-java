@@ -3,6 +3,7 @@ package com.ivanfernandez.dailytrends.apps.cmsbackend.errors;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ivanfernandez.dailytrends.apps.cmsbackend.IntegrationTest;
+import com.ivanfernandez.dailytrends.contexts.cms.feeds.domain.InvalidStoredFeed;
 import com.ivanfernandez.dailytrends.contexts.cms.shared.domain.ConflictError;
 import com.ivanfernandez.dailytrends.contexts.cms.shared.domain.InvalidArgumentError;
 import com.ivanfernandez.dailytrends.contexts.cms.shared.domain.NotFoundError;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @IntegrationTest
@@ -64,6 +66,15 @@ class ErrorHandlingIT {
     }
 
     @Test
+    void answers_a_generic_500_for_an_invalid_stored_feed() {
+        MvcTestResult response = mvc.get().uri("/probe/invalid-stored-feed").exchange();
+
+        assertThat(response).hasStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response).bodyJson().isStrictlyEqualTo("""
+                {"error": "Internal server error"}""");
+    }
+
+    @Test
     void logs_an_unexpected_error_once_with_method_path_and_stack_trace(CapturedOutput output) {
         mvc.get().uri("/probe/unexpected").exchange();
 
@@ -93,24 +104,30 @@ class ErrorHandlingIT {
     }
 
     @RestController
+    @RequestMapping("/probe")
     static class ErrorProbeController {
 
-        @GetMapping("/probe/invalid-argument")
+        @GetMapping("/invalid-argument")
         void invalidArgument() {
             throw new InvalidArgumentError("<ProbeId> does not allow the value <x>");
         }
 
-        @GetMapping("/probe/not-found")
+        @GetMapping("/not-found")
         void notFound() {
             throw new ProbeNotFound();
         }
 
-        @GetMapping("/probe/conflict")
+        @GetMapping("/conflict")
         void conflict() {
             throw new ProbeAlreadyExists();
         }
 
-        @GetMapping("/probe/unexpected")
+        @GetMapping("/invalid-stored-feed")
+        void invalidStoredFeed() {
+            throw new InvalidStoredFeed("9b2f3a4e-1c5d-4e6f-8a7b-0c1d2e3f4a5b", "field 'createdAt' is not a date");
+        }
+
+        @GetMapping("/unexpected")
         void unexpected() {
             throw new IllegalStateException("db password=x");
         }

@@ -7,7 +7,7 @@ created_at: '2026-10-14T12:29:53Z'
 created_by:
   tool: 'Claude Code'
   model: 'claude-opus-5-5'
-updated_at: '2026-10-14T13:03:24Z'
+updated_at: '2026-10-14T15:33:40Z'
 implemented_phases:
   - phase: 1
     implemented_at: '2026-10-14T14:10:00Z'
@@ -23,6 +23,10 @@ implemented_phases:
     model: 'claude-opus-5-5'
   - phase: 4
     implemented_at: '2026-10-14T13:03:24Z'
+    tool: 'Claude Code'
+    model: 'claude-opus-5-5'
+  - phase: 5
+    implemented_at: '2026-10-14T15:33:40Z'
     tool: 'Claude Code'
     model: 'claude-opus-5-5'
 ---
@@ -96,6 +100,11 @@ configuration (Spring profiles and properties) and connects to MongoDB. It answe
   2. write the decoy `config/application.properties`;
   3. `./mvnw verify`;
   4. `docker build .` (added in Phase 6).
+- **Local gate before sharing code** (agreed after Phase 5):
+  - `.githooks/pre-push` runs `./mvnw verify` and aborts the push on failure. It is enabled per
+    clone with `git config core.hooksPath .githooks`, as documented in the README and `AGENTS.md`.
+  - It runs on push, not on commit, because the full gate starts MongoDB and takes about a minute.
+  - It checks the working tree and warns when uncommitted changes are present.
 
 ### Notes agreed during planning
 
@@ -526,15 +535,15 @@ both repositories.
 
 ### Tests first
 
-- [ ] `CriteriaTest`:
+- [x] `CriteriaTest`:
   - `all()` has no filters, no order and no limit;
   - several filters are kept (OR);
   - order;
   - a missing limit is empty;
   - `limit(0)` and `limit(-1)` throw `InvalidArgumentError`.
-- [ ] `FeedFieldTest`: `fromValue("created_at")` returns `CREATED_AT`; `fromValue("tittle")` throws
+- [x] `FeedFieldTest`: `fromValue("created_at")` returns `CREATED_AT`; `fromValue("tittle")` throws
   `InvalidArgumentError`.
-- [ ] `FeedRepositoryContractTest` (abstract), run by `InMemoryFeedRepositoryTest` and
+- [x] `FeedRepositoryContractTest` (abstract), run by `InMemoryFeedRepositoryTest` and
   `MongoFeedRepositoryIT`:
   - save then search `all()` returns the feed with equal primitives;
   - save twice with the same id upserts;
@@ -542,26 +551,66 @@ both repositories.
   - order by `created_at` `DESC` with limit 2;
   - `existsHeadline`: `createdAt == from` is true, `createdAt == to` is false, a millisecond before
     `from` is false, and a different source or title is false.
-- [ ] `MongoFeedRepositoryIT` (MongoDB-specific, against the Testcontainers MongoDB):
+- [x] `MongoFeedRepositoryIT` (MongoDB-specific, against the Testcontainers MongoDB):
   - `createdAt` and `updatedAt` are stored as BSON `Date`, and a `null` `updatedAt` is stored as
     `null` (raw document check);
   - dates that sort differently as text and chronologically come back in chronological order;
   - a raw document with a string `createdAt` makes `search` throw `InvalidStoredFeed` naming the id;
   - an unknown `source` and a missing `title` also throw `InvalidStoredFeed`.
-- [ ] `ErrorHandlingTest`: add a case where an `InvalidStoredFeed` returns 500 with
+- [x] `ErrorHandlingIT`: add a case where an `InvalidStoredFeed` returns 500 with
   `Internal server error`.
 
 ### Implementation
 
-- [ ] `Criteria`, `Filter`, `Order`, `Direction`, `FeedField`.
-- [ ] `FeedRepository`, `InvalidStoredFeed`.
-- [ ] `MongoFeedRepository` using `MongoTemplate` with `org.bson.Document`. No mapping annotations
+- [x] `Criteria`, `Filter`, `Order`, `Direction`, `FeedField`.
+- [x] `FeedRepository`, `InvalidStoredFeed`.
+- [x] `MongoFeedRepository` using `MongoTemplate` with `org.bson.Document`. No mapping annotations
   on domain classes.
-- [ ] `FeedsConfiguration` `@Bean`.
-- [ ] `InMemoryFeedRepository` in test sources.
-- [ ] Refactor without changing behavior.
-- [ ] Run `./mvnw verify` and fix failures.
-- [ ] STOP for user review. Suggest three Conventional Commit messages.
+- [x] `FeedsConfiguration` `@Bean`.
+- [x] `InMemoryFeedRepository` in test sources.
+- [x] Refactor without changing behavior.
+- [x] Run `./mvnw verify` and fix failures.
+- [x] STOP for user review. Suggest three Conventional Commit messages.
+
+### Implementation notes
+
+- **Error messages:**
+  - an invalid limit throws `<Criteria> does not allow the limit <n>`;
+  - an unknown field throws `<FeedField> does not allow the value <name>`;
+  - `InvalidStoredFeed` reads `Invalid stored feed <id>: <reason>`, where the reason names the field
+    (`field 'createdAt' is not a Date`, `field 'title' is missing`,
+    `field 'source' has the unknown value <EL_PAIZ>`).
+- **`MongoFeedRepository`:**
+  - writes with `mongoTemplate.save(Document, "feeds")`, which upserts by `_id`;
+  - searches with `Query` plus Spring Data's `Criteria` (written fully qualified, because the name
+    clashes with the domain `Criteria`);
+  - checks headlines with `mongoTemplate.exists`;
+  - reads `Document.class` and maps each field by hand, checking its type.
+- **`InMemoryFeedRepository`** (`contexts/cms/feeds/fakes`):
+  - stores primitives, so a found feed has no recorded events;
+  - sorts `null` first in ascending order, as MongoDB does;
+  - is synchronized for S03, and exposes `all()` for assertions.
+- **Feed fixtures** combine an Object Mother with a Test Data Builder, with `FeedMother` as the one
+  entry point:
+  - `random()` and `builder()…build()` give a stored `Feed`, and the builder sets only the fields the
+    test is about;
+  - `builder()…primitives()` gives `FeedPrimitives`;
+  - `created(now)` gives a new feed that records `feed.created`;
+  - `FeedPrimitivesMother.random()` is a shortcut that delegates to the builder.
+- **`FeedRepositoryContractTest`** (abstract, in `feeds/domain`) has 9 cases. It runs in
+  `InMemoryFeedRepositoryTest` (unit) and `MongoFeedRepositoryIT`, which also has 5
+  MongoDB-specific cases and empties the collection before each test.
+- **`@IntegrationTest`** now names `CmsBackendApplication` explicitly. Tests outside
+  `apps/cmsbackend`, such as `MongoFeedRepositoryIT`, cannot find the `@SpringBootConfiguration` by
+  package search.
+- **Quality gate:** `./mvnw verify` passes with and without the decoy `config/application.properties`.
+- **IDE warnings fixed after review:**
+  - `spring-boot-configuration-processor` is added as an annotation processor and the
+    `DailyTrendsProperties` records carry Javadoc, so `target/classes/META-INF/spring-configuration-metadata.json`
+    documents the `daily-trends.*` properties (types and descriptions) and the IDE recognizes them;
+  - `MongoFeedRepository` names its storage fields with constants;
+  - some test method references became lambdas (JDT null analysis);
+  - the error probe controller uses a class-level `@RequestMapping("/probe")`.
 
 ## Phase 6: OpenAPI and delivery
 
@@ -627,4 +676,4 @@ Compose, the image build in CI, and updated docs.
 ## Next step
 
 Run `/ai-project-implement-phase .agents/plans/2026_10_14-s01-foundation/2026_10_14-s01-foundation-plan.md`
-to implement Phase 5 (criteria and MongoDB persistence). Phase 4 is done and awaits review.
+to implement Phase 6 (OpenAPI and delivery). Phase 5 is done and awaits review.
