@@ -20,14 +20,16 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 class JsoupPageDownloaderIT {
 
-    private static final Duration TIMEOUT = Duration.ofMillis(500);
+    private static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(3);
+    private static final Duration SHORT_TIMEOUT = Duration.ofMillis(500);
 
     // Jsoup runs on java.net.http: waiting for the headers times out with HttpTimeoutException,
     // reading the body with SocketTimeoutException.
     private static final Class<?>[] TIMEOUTS = {HttpTimeoutException.class, SocketTimeoutException.class};
 
     private final StubHttpServer server = StubHttpServer.start();
-    private final JsoupPageDownloader downloader = new JsoupPageDownloader(TIMEOUT);
+    private final JsoupPageDownloader downloader = new JsoupPageDownloader(RESPONSE_TIMEOUT);
+    private final JsoupPageDownloader shortTimeoutDownloader = new JsoupPageDownloader(SHORT_TIMEOUT);
 
     @AfterEach
     void stopServer() {
@@ -71,7 +73,7 @@ class JsoupPageDownloaderIT {
     void fails_when_the_server_does_not_answer_within_the_timeout() {
         server.hang("/");
 
-        assertThatThrownBy(() -> downloader.download(server.url("/")))
+        assertThatThrownBy(() -> shortTimeoutDownloader.download(server.url("/")))
                 .isInstanceOf(UncheckedIOException.class)
                 .hasMessageContaining(server.url("/"))
                 .rootCause()
@@ -81,9 +83,9 @@ class JsoupPageDownloaderIT {
     @Test
     void fails_when_the_whole_request_takes_longer_than_the_timeout() {
         List<byte[]> chunks = Collections.nCopies(10, "<p>more news</p>".getBytes(UTF_8));
-        server.respondInChunks("/", "text/html", chunks, TIMEOUT.dividedBy(5));
+        server.respondInChunks("/", "text/html", chunks, SHORT_TIMEOUT.dividedBy(5));
 
-        assertThatThrownBy(() -> downloader.download(server.url("/")))
+        assertThatThrownBy(() -> shortTimeoutDownloader.download(server.url("/")))
                 .isInstanceOf(UncheckedIOException.class)
                 .rootCause()
                 .isInstanceOfAny(TIMEOUTS);

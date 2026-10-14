@@ -7,7 +7,7 @@ created_at: '2026-10-14T16:19:31Z'
 created_by:
   tool: 'Claude Code'
   model: 'claude-opus-5-5'
-updated_at: '2026-10-14T16:36:47Z'
+updated_at: '2026-10-14T16:44:00Z'
 implemented_phases:
   - phase: 1
     implemented_at: '2026-10-14T16:27:06Z'
@@ -19,6 +19,10 @@ implemented_phases:
     model: 'claude-opus-5-5'
   - phase: 3
     implemented_at: '2026-10-14T16:36:47Z'
+    tool: 'Claude Code'
+    model: 'claude-opus-5-5'
+  - phase: 4
+    implemented_at: '2026-10-14T16:44:00Z'
     tool: 'Claude Code'
     model: 'claude-opus-5-5'
 ---
@@ -375,31 +379,54 @@ OpenAPI.
 
 ### Tests first
 
-- [ ] `FeedScrapGetControllerIT` (`@IntegrationTest`, `@Import(FakeScrapersConfiguration.class)`,
+- [x] `FeedScrapGetControllerIT` (`@IntegrationTest`, `@Import(FakeScrapersConfiguration.class)`,
   feeds collection emptied before each test), adapted from `scrap-feed.feature`:
   - two `CMS` feeds seeded → `GET /feed/scrap` → 200 with 10 feeds, the 5 `EL_MUNDO` first, then
     the 5 `EL_ESPANOL`, in feed JSON; 12 stored;
   - a second `GET /feed/scrap` → 200 `[]`, still 12 stored.
-- [ ] `OpenApiDocumentIT`:
+- [x] `OpenApiDocumentIT`:
   - `leaves_the_framework_routes_out` → the paths are exactly `/status` and `/feed/scrap`;
   - `/feed/scrap` `get` has responses `200` and `500`, and `200` is an array of `FeedResponse`;
   - the `FeedResponse` schema marks `description` and `updated_at` as nullable.
-- [ ] `FixedFeedRoutesIT` keeps passing (`/feed/scrap` is a literal pattern).
+- [x] `FixedFeedRoutesIT` keeps passing (`/feed/scrap` is a literal pattern).
 
 ### Implementation
 
-- [ ] Add the executor, downloader and `FeedScraper` beans.
-- [ ] Add `FeedScrapGetController` with its OpenAPI annotations. Adjust `FeedResponse` schema
+- [x] Add the executor, downloader and `FeedScraper` beans.
+- [x] Add `FeedScrapGetController` with its OpenAPI annotations. Adjust `FeedResponse` schema
   annotations only if springdoc does not mark the JSpecify `@Nullable` components as nullable.
-- [ ] Add `FakeScrapersConfiguration`.
-- [ ] Refactor without changing behavior.
-- [ ] Run `./mvnw verify` and fix failures.
-- [ ] Manual check: `docker compose up -d --wait`, `./mvnw spring-boot:run`, then
+- [x] Add `FakeScrapersConfiguration`.
+- [x] Refactor without changing behavior.
+- [x] Run `./mvnw verify` and fix failures.
+- [x] Manual check: `docker compose up -d --wait`, `./mvnw spring-boot:run`, then
   `curl localhost:5000/feed/scrap`; a second call returns `[]`.
-- [ ] STOP for user review. Suggest three Conventional Commit messages.
+- [x] STOP for user review. Suggest three Conventional Commit messages.
+
+### Implementation notes
+
+- **springdoc does not read JSpecify's `@Nullable`.** `FeedResponse.description` and `updated_at`
+  carry `@Schema(types = {"string", "null"})`, and `updated_at` keeps `format: date-time`, as the
+  phase allowed. `FeedResponseJsonIT` confirms the JSON is unchanged.
+- **The `200` response is declared explicitly** (`@ApiResponse` with an `application/json` array of
+  `FeedResponse`), as `StatusGetController` does, and the route `produces` JSON.
+- **The acceptance context differs** (`@Import(FakeScrapersConfiguration.class)`), so it starts its own
+  MongoDB container. The `@Primary` fake `FeedScraper` uses the application's repository, event bus,
+  clock and `virtualThreadExecutor`.
+- **Manual check (2026-10-14):** `docker compose up -d --wait mongo`, then
+  `SERVER_PORT=5123 ./mvnw spring-boot:run`:
+  - `/status` → 200;
+  - the first `/feed/scrap` → 10 real feeds, El Mundo then El Español;
+  - the second → `[]`.
+
+  Port 5000 is taken by the macOS AirPlay Receiver (`ControlCenter`, answers 403), which is why the
+  S01 manual checks also used 5123.
 
 ## Next step
 
-Phases 1 to 3 are implemented. After review, run `/ai-project-implement-phase` for Phase 4. After the last phase, review and commit, push
-`feat/s02-scrape-external-sources` (the pre-push hook runs the quality gate) and open a pull request
-to `main`. Then plan S03 with `/ai-project-create-plan specs/feeds/S03-front-page.md`.
+All S02 phases are implemented. After review and commit:
+
+1. Push `feat/s02-scrape-external-sources`; the pre-push hook runs the quality gate. Open a pull
+   request to `main`.
+2. Plan S03 with `/ai-project-create-plan specs/feeds/S03-front-page.md`. S03 routes `/feed/scrap`
+   through `ScrapeRunCoordinator.runNow()` and changes the executor shutdown to `shutdownNow()`
+   awaited before the MongoDB client closes.

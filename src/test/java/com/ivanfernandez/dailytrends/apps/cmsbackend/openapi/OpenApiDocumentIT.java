@@ -64,6 +64,52 @@ class OpenApiDocumentIT {
     void leaves_the_framework_routes_out() {
         MvcTestResult response = mvc.get().uri("/v3/api-docs").exchange();
 
-        assertThat(response).bodyJson().extractingPath("$.paths").asMap().containsOnlyKeys("/status");
+        assertThat(response).bodyJson().extractingPath("$.paths").asMap().containsOnlyKeys("/status", "/feed/scrap");
+    }
+
+    @Test
+    void documents_the_scrap_route_as_an_array_of_feeds() {
+        MvcTestResult response = mvc.get().uri("/v3/api-docs").exchange();
+
+        assertThat(response)
+                .bodyJson()
+                .extractingPath("$.paths['/feed/scrap'].get.responses")
+                .asMap()
+                .containsOnlyKeys("200", "500");
+        String schema = "$.paths['/feed/scrap'].get.responses['200'].content['application/json'].schema";
+        assertThat(response).bodyJson().extractingPath(schema + ".type").isEqualTo("array");
+        assertThat(response)
+                .bodyJson()
+                .extractingPath(schema + ".items.$ref")
+                .isEqualTo("#/components/schemas/FeedResponse");
+    }
+
+    @Test
+    void describes_the_feed_with_a_nullable_description_and_update_date() {
+        MvcTestResult response = mvc.get().uri("/v3/api-docs").exchange();
+
+        assertThat(response)
+                .bodyJson()
+                .extractingPath("$.components.schemas.FeedResponse.properties")
+                .asMap()
+                .containsOnlyKeys("id", "title", "description", "author", "source", "created_at", "updated_at");
+        assertThat(response)
+                .bodyJson()
+                .extractingPath("$.components.schemas.FeedResponse.properties.description.type")
+                .asArray()
+                .containsExactlyInAnyOrder("string", "null");
+        assertThat(response)
+                .bodyJson()
+                .extractingPath("$.components.schemas.FeedResponse.properties.updated_at.type")
+                .asArray()
+                .containsExactlyInAnyOrder("string", "null");
+        assertThat(response)
+                .bodyJson()
+                .extractingPath("$.components.schemas.FeedResponse.properties.updated_at.format")
+                .isEqualTo("date-time");
+        assertThat(response)
+                .bodyJson()
+                .extractingPath("$.components.schemas.FeedResponse.properties.title.type")
+                .isEqualTo("string");
     }
 }
