@@ -60,6 +60,7 @@ Each row is intentional. The origin column names the Python port spec that intro
 | Every run re-inserts the same headlines | Deduplicated by source + title + business day | I02, I04 |
 | Loop that regenerates an id while it exists | Removed; the id is never looked up | I02 |
 | El Mundo always decoded as iso-8859-1 and its last description character cut | Declared charset; only one trailing period removed | I02 |
+| Text of a scraped field: matches of a selector concatenated with no separator, inner whitespace kept (Cheerio `.text()`) | jsoup `Elements.text()`: matches joined with a space, whitespace collapsed | this port |
 | No timeout, no `User-Agent`, a meaningless `Content-Type` request header | Configurable timeout, `User-Agent`, no `Content-Type` | I02, I04 |
 | `/feed/home` scrapes inside the request and retries on every request | Background refresh, single flight, cooldown | I03 |
 | "Today" uses the server's `TZ` | Business timezone | I04 |
