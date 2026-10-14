@@ -7,10 +7,14 @@ created_at: '2026-10-14T16:19:31Z'
 created_by:
   tool: 'Claude Code'
   model: 'claude-opus-5-5'
-updated_at: '2026-10-14T16:27:06Z'
+updated_at: '2026-10-14T16:31:05Z'
 implemented_phases:
   - phase: 1
     implemented_at: '2026-10-14T16:27:06Z'
+    tool: 'Claude Code'
+    model: 'claude-opus-5-5'
+  - phase: 2
+    implemented_at: '2026-10-14T16:31:05Z'
     tool: 'Claude Code'
     model: 'claude-opus-5-5'
 ---
@@ -205,7 +209,7 @@ charset. It is verified against a local stub server; no real network.
 
 ### Tests first
 
-- [ ] `JsoupPageDownloaderTest` (unit, `StubHttpServer`):
+- [x] `JsoupPageDownloaderIT` (Failsafe: it uses a local HTTP stub, `StubHttpServer`):
   - sends `User-Agent: daily-trends-java` and no `Content-Type` header;
   - follows a `301` to another path and parses the target page;
   - a `404` page is returned and parsed (its `<title>` is readable);
@@ -213,7 +217,7 @@ charset. It is verified against a local stub server; no real network.
   - a server that sends the body in slow chunks, each faster than the timeout but longer in total,
     fails (the timeout covers the whole request);
   - an unreachable port fails with `UncheckedIOException`.
-- [ ] Charset cases (same class, `€` encoded as the byte `0xA4` in iso-8859-15):
+- [x] Charset cases (same class, `€` encoded as the byte `0xA4` in iso-8859-15):
   - `Content-Type: text/html; charset=iso-8859-15` decodes `€`;
   - only `<meta charset="iso-8859-15">` decodes `€`;
   - only `<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-15">` decodes `€`;
@@ -225,11 +229,27 @@ charset. It is verified against a local stub server; no real network.
 
 ### Implementation
 
-- [ ] Add `StubHttpServer`.
-- [ ] Add `JsoupPageDownloader` with the minimum code that makes each test pass.
-- [ ] Refactor without changing behavior.
-- [ ] Run `./mvnw verify` and fix failures.
-- [ ] STOP for user review. Suggest three Conventional Commit messages.
+- [x] Add `StubHttpServer`.
+- [x] Add `JsoupPageDownloader` with the minimum code that makes each test pass.
+- [x] Refactor without changing behavior.
+- [x] Run `./mvnw verify` and fix failures.
+- [x] STOP for user review. Suggest three Conventional Commit messages.
+
+### Implementation notes
+
+- **The test is an `*IT`**, not a `*Test`, because it talks to a local HTTP server
+  (`ai-project-unit-testing`: adapters against a local HTTP stub are integration tests).
+- **Jsoup 1.23 runs on `java.net.http.HttpClient`.** A server that never sends the headers times out
+  with `HttpTimeoutException`; a body that arrives too slowly times out with `SocketTimeoutException`.
+  Both are `IOException`s, wrapped in `UncheckedIOException`, so the scraper fails either way. The
+  timeout tests accept both as the root cause.
+- **The timeout covers the whole request.** The slow-body test sends 10 chunks 100 ms apart with a
+  500 ms timeout: no single read waits for the timeout, and the request still fails.
+- **Every charset case passed with jsoup as is**, including an unknown header charset name, which
+  falls back to `<meta>`. Nothing was reimplemented.
+- `StubHttpServer` waits on a latch (`hang`) instead of sleeping. Only `respondInChunks` sleeps
+  between chunks, because the stub plays a slow server; the test thread never sleeps.
+- An extra test checks that a timeout longer than an `int` of milliseconds is capped, not rejected.
 
 ## Phase 3: Front page extraction and source scrapers
 
@@ -352,6 +372,6 @@ OpenAPI.
 
 ## Next step
 
-Phase 1 is implemented. After review, run `/ai-project-implement-phase` for Phase 2. After the last phase, review and commit, push
+Phases 1 and 2 are implemented. After review, run `/ai-project-implement-phase` for Phase 3. After the last phase, review and commit, push
 `feat/s02-scrape-external-sources` (the pre-push hook runs the quality gate) and open a pull request
 to `main`. Then plan S03 with `/ai-project-create-plan specs/feeds/S03-front-page.md`.
