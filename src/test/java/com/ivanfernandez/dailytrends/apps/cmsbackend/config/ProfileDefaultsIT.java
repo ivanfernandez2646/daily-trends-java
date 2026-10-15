@@ -25,7 +25,7 @@ class ProfileDefaultsIT {
 
             assertThat(properties.timezone()).isEqualTo(ZoneId.of("Europe/Madrid"));
             assertThat(properties.scraping().timeout()).isEqualTo(Duration.ofSeconds(10));
-            assertThat(properties.scraping().cooldown()).isEqualTo(Duration.ofSeconds(300));
+            assertThat(properties.scraping().cooldown()).isEqualTo(Duration.ofMinutes(5));
             assertThat(context.getEnvironment().getProperty("server.port")).isEqualTo("5000");
         }
     }

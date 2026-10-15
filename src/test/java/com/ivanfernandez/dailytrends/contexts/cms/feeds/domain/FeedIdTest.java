@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ivanfernandez.dailytrends.contexts.cms.shared.domain.InvalidArgumentError;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -50,5 +51,14 @@ class FeedIdTest {
         String value = "9b2f3a4e-1c5d-4e6f-8a7b-0c1d2e3f4a5b";
 
         assertThat(new FeedId(value)).isEqualTo(new FeedId(value)).isNotEqualTo(FeedIdMother.random());
+    }
+
+    @Test
+    void random_creates_a_new_uuid_v4_each_time() {
+        FeedId first = FeedId.random();
+        FeedId second = FeedId.random();
+
+        assertThat(UUID.fromString(first.value()).version()).isEqualTo(4);
+        assertThat(first).isNotEqualTo(second);
     }
 }

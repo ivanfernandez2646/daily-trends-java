@@ -23,9 +23,10 @@ the ones not already stored on the same business day.
 Same walk as Node's `FeedScraperBase`:
 
 - Walk the `article` elements of the page in document order.
-- Inside each article, read author, title and description with the source's selectors, as text
-  trimmed of whitespace. A selector that matches several elements uses their joined text, as Cheerio's
-  `.text()` does.
+- Inside each article, read author, title and description with the source's selectors, as jsoup's
+  `Elements.text()`: the text of every matching element, joined with a space, with whitespace
+  collapsed and trimmed (`<a>Ana</a><a>Luis</a>` → `"Ana Luis"`). Cheerio's `.text()` joined them with
+  no separator and kept inner whitespace (S00).
 - Skip an article with no author or no title (no element, or blank text).
 - Stop after **5 feeds per source**. The limit counts extracted articles, before deduplication.
 - A missing or blank description is `null`. The rule applies after the source's cleanup.
