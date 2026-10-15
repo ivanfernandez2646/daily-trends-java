@@ -64,7 +64,11 @@ class OpenApiDocumentIT {
     void leaves_the_framework_routes_out() {
         MvcTestResult response = mvc.get().uri("/v3/api-docs").exchange();
 
-        assertThat(response).bodyJson().extractingPath("$.paths").asMap().containsOnlyKeys("/status", "/feed/scrap");
+        assertThat(response)
+                .bodyJson()
+                .extractingPath("$.paths")
+                .asMap()
+                .containsOnlyKeys("/status", "/feed/scrap", "/feed/home");
     }
 
     @Test
@@ -77,6 +81,23 @@ class OpenApiDocumentIT {
                 .asMap()
                 .containsOnlyKeys("200", "500");
         String schema = "$.paths['/feed/scrap'].get.responses['200'].content['application/json'].schema";
+        assertThat(response).bodyJson().extractingPath(schema + ".type").isEqualTo("array");
+        assertThat(response)
+                .bodyJson()
+                .extractingPath(schema + ".items.$ref")
+                .isEqualTo("#/components/schemas/FeedResponse");
+    }
+
+    @Test
+    void documents_the_home_route_as_the_same_array_of_feeds_as_the_scrap_route() {
+        MvcTestResult response = mvc.get().uri("/v3/api-docs").exchange();
+
+        assertThat(response)
+                .bodyJson()
+                .extractingPath("$.paths['/feed/home'].get.responses")
+                .asMap()
+                .containsOnlyKeys("200", "500");
+        String schema = "$.paths['/feed/home'].get.responses['200'].content['application/json'].schema";
         assertThat(response).bodyJson().extractingPath(schema + ".type").isEqualTo("array");
         assertThat(response)
                 .bodyJson()

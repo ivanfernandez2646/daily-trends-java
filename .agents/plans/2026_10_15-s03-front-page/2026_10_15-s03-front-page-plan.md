@@ -104,19 +104,19 @@ Wire the front-page use case into the controller, verify the acceptance scenario
 
 ### Tests first
 
-- [ ] Add a failing acceptance test for empty database: `200 []` and no scrape run.
-- [ ] Add a failing acceptance test mirroring the home-feed rows with `EL_PAIS` replaced by `EL_ESPAÑOL` and no run for a fresh page.
-- [ ] Add a failing acceptance test for CMS-only data: home returns `[]`, scrap returns 10, then home returns 10.
-- [ ] Add a failing acceptance test for a stale `EL_MUNDO` feed: stale page returns the stale feed, then the background run updates it.
-- [ ] Add a failing acceptance test for every source failing: the stale feed continues to be served.
-- [ ] Add a failing OpenAPI test: `GET /feed/home` has the expected 200 response schema.
+- [x] Add a failing acceptance test for empty database: `200 []` and no scrape run.
+- [x] Add a failing acceptance test mirroring the home-feed rows with `EL_PAIS` replaced by `EL_ESPAÑOL` and no run for a fresh page.
+- [x] Add a failing acceptance test for CMS-only data: home returns `[]`, scrap returns 10, then home returns 10.
+- [x] Add a failing acceptance test for a stale `EL_MUNDO` feed: stale page returns the stale feed, then the background run updates it.
+- [x] Add a failing acceptance test for every source failing: the stale feed continues to be served.
+- [x] Add a failing OpenAPI test: `GET /feed/home` has the expected 200 response schema.
 
 ### Implementation
 
-- [ ] Expose the controller and DTO mapping for the front page.
-- [ ] Configure the composition root to assemble the front page service with the coordinator and executor.
-- [ ] Add the app-level integration tests and validate the API contract.
-- [ ] Run the full repository quality gate and fix any issues introduced by the change.
+- [x] Expose the controller and DTO mapping for the front page.
+- [x] Configure the composition root to assemble the front page service with the coordinator and executor.
+- [x] Add the app-level integration tests and validate the API contract.
+- [x] Run the full repository quality gate and fix any issues introduced by the change.
 - [ ] STOP for user review. Suggest three Conventional Commit messages.
 
 ### Verification
@@ -126,8 +126,8 @@ Wire the front-page use case into the controller, verify the acceptance scenario
 
 # Next step
 
-Phase 2 is implemented and awaiting review: `ScrapeRunCoordinator` (single-flight `Semaphore`, cooldown measured with the `Clock`, `close()` that does `shutdownNow()` and awaits), wired in `FeedsConfiguration`, and `GET /feed/scrap` now goes through `runNow()`. The quality gate passes. After review and commit, run the implementation skill for Phase 3: wire `FrontPageSearcher` (with the coordinator as its `BackgroundRefresh`), the `GET /feed/home` controller, the acceptance tests and the OpenAPI contract.
+Phase 3 is implemented and awaiting review: `GET /feed/home` (`FeedHomeGetController`), the `FrontPageSearcher` bean with the coordinator as its `BackgroundRefresh`, the acceptance tests and the OpenAPI contract. The full quality gate passes. `./mvnw verify -Pnetwork` was not run (live sites); run it manually if wanted. After review and commit, S03 is complete: set the spec status accordingly.
 
-Decisions: the background executor port is the JDK `ExecutorService` (the coordinator also shuts it down on `close()`, so it runs before the MongoDB client closes); tests use `DirectExecutorService` to run refreshes synchronously and a real virtual-thread executor with latches to hold a run.
+Decisions: acceptance tests turn the cooldown off (`daily-trends.scraping.cooldown=0s`) and use `ScrapeRunCoordinator.runNow()` as an exact barrier for a background run, because a refresh holds the guard from the moment it is accepted; fake scrapers are beans so tests count their calls.
 
-Implementation metadata: Phase 1 and Phase 2 implemented 2026-10-15 by Claude Sonnet 5.5.
+Implementation metadata: Phases 1–3 implemented 2026-10-15 by Claude Sonnet 5.5.

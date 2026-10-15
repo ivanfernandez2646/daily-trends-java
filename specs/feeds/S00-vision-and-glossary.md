@@ -1,6 +1,6 @@
 # S00 · Vision and glossary
 
-**Status:** draft · **General rule:** the port starts from the Node behavior (`reference/daily-trends-node`)
+**Status:** done · **General rule:** the port starts from the Node behavior (`reference/daily-trends-node`)
 and applies, from the start, the improvements already made in the Python port (`daily-trends-py`).
 The Node defects are not reproduced. Every difference from Node is listed below.
 

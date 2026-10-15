@@ -1,5 +1,6 @@
 package com.ivanfernandez.dailytrends.apps.cmsbackend.config;
 
+import com.ivanfernandez.dailytrends.contexts.cms.feeds.application.home.FrontPageSearcher;
 import com.ivanfernandez.dailytrends.contexts.cms.feeds.application.scrap.FeedScraper;
 import com.ivanfernandez.dailytrends.contexts.cms.feeds.application.scrap.ScrapeRunCoordinator;
 import com.ivanfernandez.dailytrends.contexts.cms.feeds.domain.FeedRepository;
@@ -55,5 +56,11 @@ public class FeedsConfiguration {
             ExecutorService virtualThreadExecutor) {
         return new ScrapeRunCoordinator(
                 feedScraper, clock, properties.scraping().cooldown(), virtualThreadExecutor);
+    }
+
+    @Bean
+    FrontPageSearcher frontPageSearcher(
+            FeedRepository feedRepository, Clock clock, ScrapeRunCoordinator scrapeRunCoordinator) {
+        return new FrontPageSearcher(feedRepository, clock, scrapeRunCoordinator);
     }
 }
