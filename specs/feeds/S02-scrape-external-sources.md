@@ -1,6 +1,6 @@
 # S02 · Scrape external sources
 
-**Status:** draft · **Depends on:** S01. **Node origin:** `FeedScraper`, `FeedScraperBase`,
+**Status:** done · **Depends on:** S01. **Node origin:** `FeedScraper`, `FeedScraperBase`,
 `ElMundoFeedScraper`, `ElPaisFeedScraper`, `scrap-feed.feature`.
 
 ## Goal

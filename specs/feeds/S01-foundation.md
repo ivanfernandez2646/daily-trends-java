@@ -1,6 +1,6 @@
 # S01 · Foundation
 
-**Status:** draft · **Depends on:** nothing.
+**Status:** done · **Depends on:** nothing.
 
 ## Goal
 A running app that starts, reads configuration, connects to Mongo, answers `GET /status`, formats

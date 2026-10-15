@@ -1,6 +1,8 @@
 package com.ivanfernandez.dailytrends.apps.cmsbackend.config;
 
+import com.ivanfernandez.dailytrends.contexts.cms.feeds.application.home.FrontPageSearcher;
 import com.ivanfernandez.dailytrends.contexts.cms.feeds.application.scrap.FeedScraper;
+import com.ivanfernandez.dailytrends.contexts.cms.feeds.application.scrap.ScrapeRunCoordinator;
 import com.ivanfernandez.dailytrends.contexts.cms.feeds.domain.FeedRepository;
 import com.ivanfernandez.dailytrends.contexts.cms.feeds.infrastructure.persistence.mongo.MongoFeedRepository;
 import com.ivanfernandez.dailytrends.contexts.cms.feeds.infrastructure.scrap.ElEspanolFrontPageScraper;
@@ -43,5 +45,22 @@ public class FeedsConfiguration {
                 eventBus,
                 clock,
                 virtualThreadExecutor);
+    }
+
+    /** Its {@code close()} stops a run in progress; it runs before the MongoDB client closes. */
+    @Bean
+    ScrapeRunCoordinator scrapeRunCoordinator(
+            FeedScraper feedScraper,
+            Clock clock,
+            DailyTrendsProperties properties,
+            ExecutorService virtualThreadExecutor) {
+        return new ScrapeRunCoordinator(
+                feedScraper, clock, properties.scraping().cooldown(), virtualThreadExecutor);
+    }
+
+    @Bean
+    FrontPageSearcher frontPageSearcher(
+            FeedRepository feedRepository, Clock clock, ScrapeRunCoordinator scrapeRunCoordinator) {
+        return new FrontPageSearcher(feedRepository, clock, scrapeRunCoordinator);
     }
 }

@@ -1,6 +1,6 @@
 # S03 · Front page
 
-**Status:** draft · **Depends on:** S01, S02. **Node origin:** `FeedHomeController`, `FeedSearcher`,
+**Status:** done · **Depends on:** S01, S02. **Node origin:** `FeedHomeController`, `FeedSearcher`,
 `home-feed.feature`.
 
 ## Goal

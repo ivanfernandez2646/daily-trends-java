@@ -24,18 +24,24 @@ public class FakeScrapersConfiguration {
             List.of("Español 1", "Español 2", "Español 3", "Español 4", "Español 5");
 
     @Bean
+    FakeFrontPageScraper elMundoFake(Clock clock) {
+        return FakeFrontPageScraper.returning(FeedSource.EL_MUNDO, clock, EL_MUNDO_TITLES.toArray(String[]::new));
+    }
+
+    @Bean
+    FakeFrontPageScraper elEspanolFake(Clock clock) {
+        return FakeFrontPageScraper.returning(FeedSource.EL_ESPANOL, clock, EL_ESPANOL_TITLES.toArray(String[]::new));
+    }
+
+    @Bean
     @Primary
     FeedScraper fakeFeedScraper(
-            FeedRepository repository, EventBus eventBus, Clock clock, ExecutorService virtualThreadExecutor) {
-        return new FeedScraper(
-                List.of(
-                        FakeFrontPageScraper.returning(
-                                FeedSource.EL_MUNDO, clock, EL_MUNDO_TITLES.toArray(String[]::new)),
-                        FakeFrontPageScraper.returning(
-                                FeedSource.EL_ESPANOL, clock, EL_ESPANOL_TITLES.toArray(String[]::new))),
-                repository,
-                eventBus,
-                clock,
-                virtualThreadExecutor);
+            FakeFrontPageScraper elMundoFake,
+            FakeFrontPageScraper elEspanolFake,
+            FeedRepository repository,
+            EventBus eventBus,
+            Clock clock,
+            ExecutorService virtualThreadExecutor) {
+        return new FeedScraper(List.of(elMundoFake, elEspanolFake), repository, eventBus, clock, virtualThreadExecutor);
     }
 }
