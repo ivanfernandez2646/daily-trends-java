@@ -1,6 +1,6 @@
 package com.ivanfernandez.dailytrends.apps.cmsbackend.feeds;
 
-import com.ivanfernandez.dailytrends.contexts.cms.feeds.application.scrap.FeedScraper;
+import com.ivanfernandez.dailytrends.contexts.cms.feeds.application.scrap.ScrapeRunCoordinator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,10 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class FeedScrapGetController {
 
-    private final FeedScraper feedScraper;
+    private final ScrapeRunCoordinator coordinator;
 
-    public FeedScrapGetController(FeedScraper feedScraper) {
-        this.feedScraper = feedScraper;
+    public FeedScrapGetController(ScrapeRunCoordinator coordinator) {
+        this.coordinator = coordinator;
     }
 
     @GetMapping(path = "/feed/scrap", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -30,7 +30,7 @@ public class FeedScrapGetController {
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             array = @ArraySchema(schema = @Schema(implementation = FeedResponse.class))))
     public List<FeedResponse> scrap() {
-        return feedScraper.scrape().stream()
+        return coordinator.runNow().stream()
                 .map(feed -> FeedResponse.from(feed.toPrimitives()))
                 .toList();
     }

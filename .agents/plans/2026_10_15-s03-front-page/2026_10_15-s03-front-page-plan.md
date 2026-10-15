@@ -70,19 +70,19 @@ Introduce the `ScrapeRunCoordinator` that owns the single-flight guard and coold
 
 ### Tests first
 
-- [ ] Add a failing unit test for refresh requests while a run is in progress: the refresh is ignored and only one scraper call happens.
-- [ ] Add a failing unit test for cooldown behavior: ignored inside the cooldown window and allowed at or after the threshold.
-- [ ] Add a failing unit test for `runNow()`: it waits for a current background run, ignores the cooldown, and does not queue a duplicate run.
-- [ ] Add a failing unit test for background-run exceptions: they are logged, do not propagate, the guard is released, and the cooldown starts.
-- [ ] Add a failing shutdown test: in-progress runs are interrupted and awaited.
+- [x] Add a failing unit test for refresh requests while a run is in progress: the refresh is ignored and only one scraper call happens.
+- [x] Add a failing unit test for cooldown behavior: ignored inside the cooldown window and allowed at or after the threshold.
+- [x] Add a failing unit test for `runNow()`: it waits for a current background run, ignores the cooldown, and does not queue a duplicate run.
+- [x] Add a failing unit test for background-run exceptions: they are logged, do not propagate, the guard is released, and the cooldown starts.
+- [x] Add a failing shutdown test: in-progress runs are interrupted and awaited.
 
 ### Implementation
 
-- [ ] Add the single-flight guard and cooldown state in the application-layer coordinator.
-- [ ] Add a background executor abstraction that can be swapped in tests.
-- [ ] Delegate the actual scraping work to the existing `FeedScraper` contract from S02.
-- [ ] Ensure `GET /feed/scrap` uses the coordinator but bypasses the cooldown.
-- [ ] Run the relevant unit and integration tests.
+- [x] Add the single-flight guard and cooldown state in the application-layer coordinator.
+- [x] Add a background executor abstraction that can be swapped in tests.
+- [x] Delegate the actual scraping work to the existing `FeedScraper` contract from S02.
+- [x] Ensure `GET /feed/scrap` uses the coordinator but bypasses the cooldown.
+- [x] Run the relevant unit and integration tests.
 - [ ] STOP for user review. Suggest three Conventional Commit messages.
 
 ### Verification
@@ -126,6 +126,8 @@ Wire the front-page use case into the controller, verify the acceptance scenario
 
 # Next step
 
-Phase 1 is implemented and awaiting review (`FrontPageSearcher` and the `BackgroundRefresh` port in `application`; the quality gate passes). After review and commit, run the implementation skill again for Phase 2: single-flight guard, cooldown and scraper coordination, where `ScrapeRunCoordinator` will implement `BackgroundRefresh`.
+Phase 2 is implemented and awaiting review: `ScrapeRunCoordinator` (single-flight `Semaphore`, cooldown measured with the `Clock`, `close()` that does `shutdownNow()` and awaits), wired in `FeedsConfiguration`, and `GET /feed/scrap` now goes through `runNow()`. The quality gate passes. After review and commit, run the implementation skill for Phase 3: wire `FrontPageSearcher` (with the coordinator as its `BackgroundRefresh`), the `GET /feed/home` controller, the acceptance tests and the OpenAPI contract.
 
-Implementation metadata: Phase 1 implemented 2026-10-15 by Claude Sonnet 5.5.
+Decisions: the background executor port is the JDK `ExecutorService` (the coordinator also shuts it down on `close()`, so it runs before the MongoDB client closes); tests use `DirectExecutorService` to run refreshes synchronously and a real virtual-thread executor with latches to hold a run.
+
+Implementation metadata: Phase 1 and Phase 2 implemented 2026-10-15 by Claude Sonnet 5.5.
